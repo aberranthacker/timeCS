@@ -1,6 +1,7 @@
 #-------------------------------------------------------------------------------
 # Note that the PRESENCE of those variables is tested, NOT their values. -------
- .equiv DebugMode, 1
+#.equiv DEBUG, 1
+.equiv WORD_LINE_NUMBERS, 1
 #-------------------------------------------------------------------------------
 .equiv CPU_PPUCommandArg, PPUCommandArg >> 1
 
@@ -35,9 +36,14 @@
 # VRAM memory map --------------------------------------------------------------
 .equiv SLTAB, 0140000 # 32768 0x8000 # bank 0
 .equiv BootstrapCopyAddr, 0100000 # banks 1 and 2
-.equiv OffscreenAreaAddr, 0160000 # 49152 0xC000 # banks 0, 1 and 2
+.equiv AUX_SCREEN_ADDR, 0160000 # 49152 0xC000 # banks 0, 1 and 2
 #-end of VRAM memory map--------------------------------------------------------
 #-------------------------------------------------------------------------------
+.equiv MAIN_SCREEN_LINES_COUNT, 256
+.equiv AUX_SCREEN_LINES_COUNT, 288 - MAIN_SCREEN_LINES_COUNT
+.equiv DEFAULT_FB, FB0
+.equiv LINE_WIDTHB, 72
+
 .equiv setCursorScalePalette, 0
 .equiv cursorGraphic, 0x10 # 020 dummy parameter
 .equiv scale640, 0x00
@@ -111,8 +117,8 @@
 .equiv setOffscreenColors, 2
 
 .equiv untilLine, -1 << 8
-.equiv untilEndOfScreen, 201
-.equiv endOfScreen, 201
+.equiv untilEndOfScreen, MAIN_SCREEN_LINES_COUNT + 1
+.equiv endOfScreen, MAIN_SCREEN_LINES_COUNT + 1
 #-------------------------------------------------------------------------------
 .equiv COIN_COST, 4
 

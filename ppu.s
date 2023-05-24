@@ -174,8 +174,8 @@ SLTABInit:
         ADD  $8,R1           #  calculate pointer to next record
         MOV  R1,(R0)+        #--pointer to the record 20
 #------------------------------------- top region, header
-        MOV  $OffscreenAreaAddr,R2 # scanlines 20..307 are visible
-        MOV  $43,R3          #
+        MOV  $AUX_SCREEN_ADDR,R2 # scanlines 20..307 are visible
+        MOV  $AUX_SCREEN_LINES_COUNT >> 1 - 1,R3       #
         2$:
             MOV  R2,(R0)+    #--address of screenline
             ADD  $4,R1       #  calc address of next record of SLTAB
@@ -195,8 +195,8 @@ SLTABInit:
         BIC  $0b100,R0       #  due to alignment
         ADD  $40,R2          #  calculate address of next screenline
 
-        MOV  R0,@$FBSLTAB   #
-        SUB  $2,@$FBSLTAB   #
+        MOV  R0,@$MainScreenLinesTable   #
+        SUB  $2,@$MainScreenLinesTable   #
 
         MOV  $0b10000,(R0)+  #--cursor settings: graphical cursor
         MOV  $0b10111,(R0)+  #  320 dots per line, pallete 7
@@ -208,28 +208,35 @@ SLTABInit:
         MOV  R0,@$FirstMainScreenLinePointer
         ADD  $4,@$FirstMainScreenLinePointer
 #----------------------------- main screen area
-        MOV  $FB1 >> 1,R2    # address of second frame-buffer
-        MOV  $200,R3         # number of lines on main screen area
+        MOV  $DEFAULT_FB >> 1,R2    # address of second frame-buffer
+        MOV  $MAIN_SCREEN_LINES_COUNT,R3 # number of lines on main screen area
         3$:                  #
+           .ifdef DEBUG
+            MOV  $0x3300,(R0)+ #  colors  011  010  001  000 (YRGB)
+            MOV  $0xFFDD,(R0)+ #  colors  111  110  101  100 (YRGB)
+           .else
             MOV  $0x0000,(R0)+ #  colors  011  010  001  000 (YRGB)
             MOV  $0x0000,(R0)+ #  colors  111  110  101  100 (YRGB)
+           .endif
             MOV  R2,(R0)+      #--main RAM address of a scanline
             ADD  $8,R1         #  calc address of next record of SLTAB
             MOV  R1,(R0)+      #--pointer to the next record of SLTAB
-            ADD  $40,R2        #  calculate address of next screenline
-        SOB  R3,3$           #
+           #ADD  $40,R2        #  calculate address of next screenline
+            ADD  $36,R2        #  calculate address of next screenline
+        SOB  R3,3$             #
 #------------------------------------- bottom region, footer
         MOV  R0,@$BottomAreaColors # store the address for future use
         MOV  $0xBA90,(R0)+   # colors  011  010  001  000 (YRGB)
         MOV  $0xFEDC,(R0)+   # colors  111  110  101  100 (YRGB)
-        MOV  $OffscreenAreaAddr+03340+40,R2  #
+       .equiv BOTTOM_AREA_OFFSET, (AUX_SCREEN_LINES_COUNT >> 1) * 40 + 40
+        MOV  $AUX_SCREEN_ADDR+BOTTOM_AREA_OFFSET, R2  #
         MOV  R2,(R0)+        #
         ADD  $40,R2          # calculate address of next screenline
         ADD  $8,R1           # calculate pointer to next record
         BIC  $0b110,R1       # next record consists of 2 words
         MOV  R1,(R0)+        #--set address of record 265
 
-        MOV  $42,R3          #
+        MOV  $AUX_SCREEN_LINES_COUNT >> 1 - 2,R3          #
         4$:
             MOV  R2,(R0)+    #--address of a screenline
             ADD  $4,R1       #  calc address of next record of SLTAB
@@ -326,17 +333,26 @@ SetPalette: #----------------------------------------------------------------{{{
       # R3 - current line
       # R4 - next line where parameters change
       # R5 - pointer to a word that we'll modify
+    .ifdef WORD_LINE_NUMBERS
+        MOV  @$PBP12D,@$NextLineNum  # get line number
+    .else
         MOVB @$PBP1DT,@$NextLineNum  # get line number
+    .endif
         PUSH (R4)
 SetPalette_NextRecord:
         MOV  @$NextLineNum,R3 # R3 = previous iteration's next line
         MOV  R3,R5            # prepare to calculate address of SLTAB section to modify
         ASH  $3,R5            # calculate offset by multiplying by 8 (by shifting R5 left by 3 bits)
-       .equiv FBSLTAB, .+2
-        ADD  $0,R5        # and add address of SLTAB section we modify
+       .equiv MainScreenLinesTable, .+2
+        ADD  $0,R5            # and add address of SLTAB section we modify
 
         POP  (R4)
+    .ifdef WORD_LINE_NUMBERS
+        INC  (R4)
+        MOV  @$PBP12D,R2         # get display/color parameters flag
+    .else
         MOVB @$PBP2DT,R2         # get display/color parameters flag
+    .endif
         BMI  SetPalette_Finalize # negative value - terminator
 
         INC  (R4)
@@ -344,7 +360,12 @@ SetPalette_NextRecord:
         INC  (R4)
         MOV  @$PBP12D,R1     # get second data word
         INC  (R4)
+    .ifdef WORD_LINE_NUMBERS
+        MOV  @$PBP12D,@$NextLineNum # get next line idx
+    .else
         MOVB @$PBP1DT,@$NextLineNum # get next line idx
+    .endif
+
         PUSH (R4)
 
         CMP  R2,$2
@@ -353,8 +374,7 @@ SetPalette_NextRecord:
         TSTB R2
         BNZ  SetPalette_SetColorRegisters # 1 - set colors
 
-#SetPalette_SetControlRegisters:
-       #BIC  $0b100,(R5)+    # 0 - set data
+SetPalette_SetControlRegisters:
         MOV  R5,(R4)
         BICB $0b100,@$PBP0DT    # 0 - set data
         INC  R5
@@ -363,7 +383,6 @@ SetPalette_NextRecord:
         BR   set_data$
 
 SetPalette_SetColorRegisters:
-       #BIS  $0b100,(R5)+
         MOV  R5,(R4)
         BISB $0b100,@$PBP0DT    # 0 - set data
         INC  R5
@@ -380,7 +399,7 @@ SetPalette_SetColorRegisters:
         CMP  R3,$0        # compare current line idx with next line idx
         BLO  set_params$  # branch if lower
 
-        CMP  @$NextLineNum,$201
+        CMP  @$NextLineNum,$MAIN_SCREEN_LINES_COUNT + 1
         BNE  SetPalette_NextRecord
         BR   SetPalette_Finalize_POP_R4
 
@@ -402,37 +421,11 @@ SetPalette_Finalize:
 
         RETURN
 #----------------------------------------------------------------------------}}}
-SetOffscreenAreaColors: # ---------------------------------------------------{{{
-        PUSH @$PASWCR
-        MOV  $0x010,@$PASWCR
-
-       #CLC
-       #ROR  R0
-       #MOV  R0,@$PBPADR # palette address
-       #MOV  $PBPADR,R5
-       #MOV  $PBP12D,R4
-       #MOV  R0,(R5)
-
-       #MOV  (R4),R1
-       #INC  (R5)
-       #MOV  (R4),R2
-       #equiv TopAreaColors, .+2
-       #MOV  $0,R3
-       #MOV  R1,(R3)+
-       #MOV  R2,(R3)
-       #equiv BottomAreaColors, .+2
-       #MOV  $0,R3
-       #MOV  R1,(R3)+
-       #MOV  R2,(R3)
-
-        POP  @$PASWCR
-        RETURN
-#----------------------------------------------------------------------------}}}
 ClearOffscreenArea: # -------------------------------------------------------{{{
-        MOV  $88*4,R1
+        MOV  $AUX_SCREEN_LINES_COUNT * 4,R1
         MOV  $DTSOCT,R4
         MOV  $PBPADR,R5
-        MOV  $OffscreenAreaAddr,(R5)
+        MOV  $AUX_SCREEN_ADDR,(R5)
         CLR  @$PBPMSK # write to all bit-planes
         CLR  @$BP01BC # background color, pixels 0-3
         CLR  @$BP12BC # background color, pixels 4-7

@@ -6,7 +6,7 @@
                .include "../aku/uknc/macros.s"
                .include "./core_defs.s"
 
-               .global core.bin
+               .global main.bin
 
        .=0
         NOP  # Bootable disk marker
@@ -42,7 +42,7 @@
             TST  @$PPUCommandArg
         BNZ  WaitForPPUInit
       #-------------------------------------------------------------------------
-        MOV  $core.bin,R0
+        MOV  $main.bin,R0
         CALL LoadDiskFile.Start
         CALL LoadDiskFile.WaitForFinish
       #-------------------------------------------------------------------------
@@ -142,7 +142,7 @@ PPUModule_PS:
     PPUModule_PS.A2:      .word  PPU_UserRamSizeWords   # Argument 2
     PPUModule_PS.A3:      .word  0   # Argument 3
 #-------------------------------------------------------------------------------
-core.bin:
+main.bin:
     .word CORE_START
     .word 0
     .word 0
