@@ -1,13 +1,15 @@
-AS=~/opt/binutils-pdp11/pdp11-dec-aout/bin/as
-LD=~/opt/binutils-pdp11/pdp11-dec-aout/bin/ld
-
 AKG_PLAYER_PATH = ../akg_player
+BIN_UTILS_PATH=~/opt/binutils-pdp11/pdp11-dec-aout/bin
 BUILD_TOOLS_PATH= ../aku/uknc/build_tools
+
+AS=$(BIN_UTILS_PATH)/as
+LD=$(BIN_UTILS_PATH)/ld
 
 AOUT2SAV = $(BUILD_TOOLS_PATH)/aout2sav.rb
 BMP_TO_RAW = $(BUILD_TOOLS_PATH)/bmp_to_raw.rb
 BUILD_DSK = $(BUILD_TOOLS_PATH)/build_dsk.rb
 FORMAT_LIST = $(BUILD_TOOLS_PATH)/format_list.rb
+LZSA3 =  $(BUILD_TOOLS_PATH)/lzsa3
 UPDATE_DISKMAP = $(BUILD_TOOLS_PATH)/update_disk_map.rb
 # 2.38
 MAKEFLAGS += --silent --jobs
@@ -22,9 +24,9 @@ INCS = -I../aku/uknc -I$(AKG_PLAYER_PATH)
 # --print-map -M
 # --strip-all -s
 
-COMMON = core_defs.s ../aku/uknc/hwdefs.s ../aku/uknc/macros.s
+COMMON = defs.s ../aku/uknc/hwdefs.s ../aku/uknc/macros.s
 
-all : pre-build build/demo.dsk
+all : pre-build build/timeCS.dsk
 
 pre-build :
 	mkdir -p build
@@ -32,55 +34,206 @@ pre-build :
 clean :
 	rm -rf build/*
 
-# demo.dsk ------------------------------------------------------------------{{{
-build/demo.dsk : $(BUILD_DSK) \
-		 $(BUILD_TOOLS_PATH)/dsk_image_constants.rb \
-		 $(UPDATE_DISKMAP) \
-		 dsk_flist \
-		 build/bootsector.bin \
-		 build/ppu_module.bin \
-		 build/main.bin
+# timeCS.dsk ----------------------------------------------------------------{{{
+build/timeCS.dsk : $(BUILD_DSK) \
+		   $(BUILD_TOOLS_PATH)/dsk_image_constants.rb \
+		   $(UPDATE_DISKMAP) \
+		   dsk_flist \
+		   build/bootsector.bin \
+		   build/ppu_module.bin \
+		   build/loader.bin \
+		   build/title.bin \
+		   build/player.bin
+	$(UPDATE_DISKMAP) dsk_flist build/title.map.txt build/title.bin -e 37264
 	$(UPDATE_DISKMAP) dsk_flist build/bootsector.map.txt build/bootsector.bin
-	$(BUILD_DSK) dsk_flist build/demo.dsk
-# demo.dsk ------------------------------------------------------------------}}}
+	$(BUILD_DSK) dsk_flist build/timeCS.dsk
+# timeCS.dsk ----------------------------------------------------------------}}}
 
 # bootsector.bin ------------------------------------------------------------{{{
 build/bootsector.bin : build/bootsector.o \
-                       build/main.o \
+                       build/loader.o \
+                       build/player.o \
+                       build/title.o \
                        build/ppu.o
 	$(LD) $(LDFLAGS) -M \
 		-T linker_scripts/bootsector.cmd \
-		-R build/main.o \
 		-R build/ppu.o > build/bootsector.map.txt
 	chmod -x build/bootsector.bin
 
 build/bootsector.o : $(COMMON) \
                      bootsector.s
-	$(AS) -al bootsector.s -o build/bootsector.o | $(FORMAT_LIST)
+	$(AS) $(INCS) -al bootsector.s -o build/bootsector.o | $(FORMAT_LIST)
 # bootsector.bin ------------------------------------------------------------}}}
 
 # ppu_module.bin ------------------------------------------------------------{{{
-build/ppu_module.bin : build/ppu.o \
-                       build/main.o
-	$(LD) $(LDFLAGS) -T linker_scripts/ppu.cmd -R build/main.o
+build/ppu_module.bin : build/ppu.o
+	$(LD) $(LDFLAGS) -T linker_scripts/ppu.cmd -R build/main.o -R build/title.o
 	ruby $(AOUT2SAV) build/ppu.out -b -s -o build/ppu_module.bin
 build/ppu.o : $(COMMON) \
               ppu.s \
               ppu/interrupts_handlers.s \
-              $(AKG_PLAYER_PATH)/akg_player.s \
-              $(AKG_PLAYER_PATH)/akg_sound_effects.s
-	$(AS) ppu.s $(INCS) -o build/ppu.o | $(FORMAT_LIST)
+              psgplayer.s \
+              pt3play2.s
+	$(AS) ppu.s $(INCS) -al -o build/ppu.o | $(FORMAT_LIST)
 # ppu_module.bin ------------------------------------------------------------}}}
 
-# main.bin ------------------------------------------------------------------{{{
-build/main.bin : build/main.o
-	$(LD) $(LDFLAGS) build/main.o -o build/main.out
-	ruby $(AOUT2SAV) build/main.out -b -s -o build/main.bin
-build/main.o : $(COMMON) \
-               main.s \
+# loader.bin ----------------------------------------------------------------{{{
+build/loader.bin : build/loader.o
+	$(LD) $(LDFLAGS) build/loader.o -o build/loader.out
+	ruby $(AOUT2SAV) build/loader.out -b -s -o build/loader.bin
+build/loader.o : $(COMMON) \
+               loader.s \
                build/c2ay_toyhifi.raw
-	$(AS) main.s $(INCS) -al -o build/main.o | $(FORMAT_LIST)
-# main.bin ------------------------------------------------------------------}}}
+	$(AS) loader.s $(INCS) -al -o build/loader.o | $(FORMAT_LIST)
+# loader.bin ----------------------------------------------------------------}}}
+
+# player.bin ----------------------------------------------------------------{{{
+build/player.bin : build/player.o
+	$(LD) $(LDFLAGS) build/player.o -o build/player.out
+	ruby $(AOUT2SAV) build/player.out -b -s -o build/player.bin
+build/player.o : $(COMMON) \
+               player.s \
+               unlzsa3.s \
+               build/loading.raw \
+               build/mainscr.raw.lzsa \
+               build/song_names.raw \
+               build/song01.ovl \
+               build/song02.ovl \
+               build/song03.ovl \
+               build/song04.ovl \
+               build/song05.ovl \
+               build/song06.ovl \
+               build/song07.ovl \
+               build/song08.ovl \
+               build/song09.ovl \
+               build/song10.ovl \
+               build/song11.ovl \
+               build/song12.ovl \
+               build/song13.ovl \
+               build/song14.ovl \
+               build/song15.ovl \
+               build/song16.ovl \
+               build/song17.ovl \
+               build/song18.ovl
+	$(AS) player.s $(INCS) -al -o build/player.o | $(FORMAT_LIST)
+# player.bin ----------------------------------------------------------------}}}
+
+# title.bin ----------------------------------------------------------------{{{
+build/title.bin : build/title.o
+	$(LD) $(LDFLAGS) -M build/title.o -o build/title.out > build/title.map.txt
+	$(AOUT2SAV) build/title.out -b -s -o build/title.bin
+build/title.o : $(COMMON) \
+                title.s \
+                unlzsa3.s \
+		build/timecs1.raw \
+		build/timecs1m.raw \
+		build/timecs2.raw \
+		build/timecs2m.raw \
+		build/timecs3.raw \
+		build/timecs3m.raw \
+		build/timecs4.raw \
+		build/timecs4m.raw \
+		build/timecs5.raw \
+		build/timecs5m.raw \
+		build/timecs6.raw \
+		build/timecs6m.raw \
+		build/clockhand.raw \
+		build/w3.raw.lzsa
+	$(AS) title.s $(INCS) -al -o build/title.o | $(FORMAT_LIST)
+# title.bin -----------------------------------------------------------------}}}
 
 build/c2ay_toyhifi.raw : $(BMP_TO_RAW) gfx/c2ay_toyhifi.bmp
 	$(BMP_TO_RAW) gfx/c2ay_toyhifi.bmp build/c2ay_toyhifi.raw
+build/w3.raw.lzsa : build/w3.raw
+	$(LZSA3) build/w3.raw build/w3.raw.lzsa
+build/w3.raw : $(BMP_TO_RAW) gfx/w3.bmp
+	$(BMP_TO_RAW) gfx/w3.bmp build/w3.raw
+build/timecs1.raw : $(BMP_TO_RAW) gfx/timecs1.bmp
+	$(BMP_TO_RAW) gfx/timecs1.bmp build/timecs1.raw
+build/timecs1m.raw : $(BMP_TO_RAW) gfx/timecs1m.bmp
+	$(BMP_TO_RAW) gfx/timecs1m.bmp build/timecs1m.raw
+build/timecs2.raw : $(BMP_TO_RAW) gfx/timecs2.bmp
+	$(BMP_TO_RAW) gfx/timecs2.bmp build/timecs2.raw
+build/timecs2m.raw : $(BMP_TO_RAW) gfx/timecs2m.bmp
+	$(BMP_TO_RAW) gfx/timecs2m.bmp build/timecs2m.raw
+build/timecs3.raw : $(BMP_TO_RAW) gfx/timecs3.bmp
+	$(BMP_TO_RAW) gfx/timecs3.bmp build/timecs3.raw
+build/timecs3m.raw : $(BMP_TO_RAW) gfx/timecs3m.bmp
+	$(BMP_TO_RAW) gfx/timecs3m.bmp build/timecs3m.raw
+build/timecs4.raw : $(BMP_TO_RAW) gfx/timecs4.bmp
+	$(BMP_TO_RAW) gfx/timecs4.bmp build/timecs4.raw
+build/timecs4m.raw : $(BMP_TO_RAW) gfx/timecs4m.bmp
+	$(BMP_TO_RAW) gfx/timecs4m.bmp build/timecs4m.raw
+build/timecs5.raw : $(BMP_TO_RAW) gfx/timecs5.bmp
+	$(BMP_TO_RAW) gfx/timecs5.bmp build/timecs5.raw
+build/timecs5m.raw : $(BMP_TO_RAW) gfx/timecs5m.bmp
+	$(BMP_TO_RAW) gfx/timecs5m.bmp build/timecs5m.raw
+build/timecs6.raw : $(BMP_TO_RAW) gfx/timecs6.bmp
+	$(BMP_TO_RAW) gfx/timecs6.bmp build/timecs6.raw
+build/timecs6m.raw : $(BMP_TO_RAW) gfx/timecs6m.bmp
+	$(BMP_TO_RAW) gfx/timecs6m.bmp build/timecs6m.raw
+build/clockhand.raw : $(BMP_TO_RAW) gfx/clockhand.bmp
+	$(BMP_TO_RAW) gfx/clockhand.bmp build/clockhand.raw
+
+build/mainscr.raw.lzsa : build/mainscr.raw
+	$(LZSA3) build/mainscr.raw build/mainscr.raw.lzsa
+build/mainscr.raw : gfx/mainscr.bmp
+	$(BMP_TO_RAW) gfx/mainscr.bmp build/mainscr.raw
+build/loading.raw : $(BMP_TO_RAW) gfx/loading.bmp
+	$(BMP_TO_RAW) gfx/loading.bmp build/loading.raw
+build/song_names.raw: $(BMP_TO_RAW) gfx/song_names.bmp
+	$(BMP_TO_RAW) gfx/song_names.bmp build/song_names.raw
+
+build/song01.ovl : songs/12_b-AZuka.pt3
+	$(LZSA3) songs/12_b-AZuka.pt3 build/song01.ovl
+
+build/song02.ovl : songs/03_dontgurgle_6ch.pt3
+	$(LZSA3) songs/03_dontgurgle_6ch.pt3 build/song02.ovl
+
+build/song03.ovl : songs/04_wheelsinmotion_6ch.pt3
+	$(LZSA3) songs/04_wheelsinmotion_6ch.pt3 build/song03.ovl
+
+build/song04.ovl : songs/06_roadagain_6ch.pt3
+	$(LZSA3) songs/06_roadagain_6ch.pt3 build/song04.ovl
+
+build/song05.ovl : songs/07_inahurry_6ch.pt3
+	$(LZSA3) songs/07_inahurry_6ch.pt3 build/song05.ovl
+
+build/song06.ovl : songs/08_laidpath_6ch.pt3
+	$(LZSA3) songs/08_laidpath_6ch.pt3 build/song06.ovl
+
+build/song07.ovl : songs/09_walkedpast_6ch.pt3
+	$(LZSA3) songs/09_walkedpast_6ch.pt3 build/song07.ovl
+
+build/song08.ovl : songs/10_notyetstar_6ch.pt3
+	$(LZSA3) songs/10_notyetstar_6ch.pt3 build/song08.ovl
+
+build/song09.ovl : songs/11_freelane_6ch.pt3
+	$(LZSA3) songs/11_freelane_6ch.pt3 build/song09.ovl
+
+build/song10.ovl : songs/14_markedmap_6ch.pt3
+	$(LZSA3) songs/14_markedmap_6ch.pt3 build/song10.ovl
+
+build/song11.ovl : songs/15_waypooling_6ch.pt3
+	$(LZSA3) songs/15_waypooling_6ch.pt3 build/song11.ovl
+
+build/song12.ovl : songs/16_eternaldreamer_6ch.pt3
+	$(LZSA3) songs/16_eternaldreamer_6ch.pt3 build/song12.ovl
+
+build/song13.ovl : songs/17_distance6743_6ch.pt3
+	$(LZSA3) songs/17_distance6743_6ch.pt3 build/song13.ovl
+
+build/song14.ovl : songs/18_freedomisnothing_6ch.pt3
+	$(LZSA3) songs/18_freedomisnothing_6ch.pt3 build/song14.ovl
+
+build/song15.ovl : songs/19_escapingsilence_6ch.pt3
+	$(LZSA3) songs/19_escapingsilence_6ch.pt3 build/song15.ovl
+
+build/song16.ovl : songs/20_cafeview_6ch.pt3
+	$(LZSA3) songs/20_cafeview_6ch.pt3 build/song16.ovl
+
+build/song17.ovl : songs/21_openingdoors_6ch.pt3
+	$(LZSA3) songs/21_openingdoors_6ch.pt3 build/song17.ovl
+
+build/song18.ovl : songs/22_fmradio_6ch.pt3
+	$(LZSA3) songs/22_fmradio_6ch.pt3 build/song18.ovl

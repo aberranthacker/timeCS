@@ -1,12 +1,15 @@
-               .nolist
+               .list
 
-               .TITLE Demo Bootsector
+               .TITLE timeCS bootsector
 
-               .include "../aku/uknc/hwdefs.s"
-               .include "../aku/uknc/macros.s"
-               .include "./core_defs.s"
+               .include "hwdefs.s"
+               .include "macros.s"
+               .include "defs.s"
 
-               .global main.bin
+               .global loader.bin
+               .global player.bin
+               .global title.bin
+               .equiv PPU_MODULE_LOADING_ADDR, 0100000
 
        .=0
         NOP  # Bootable disk marker
@@ -19,35 +22,43 @@
       # R0 - contains a drive number
       # R1 - contains CSR
         MOVB R0,@$PS.DeviceNumber
-        MOV  $040,@$0100    # set dummy Vblank int handler
+        MOV  $DUMMY_INTERRUPT_HANDLER,@$0100 # set dummy Vblank int handler
         MOV  $0160000,SP
 
         CALL @$PrintTitleStr
 
       #-------------------------------------------------------------------------
-      # load PPU module
-        CALL Channel2Send
-      # ждём окончание загрузки модуля PPU с дискеты
-        30$:
-            MOVB @$PS.Status,R0
+        CALL Channel2Send # load PPU module
+    30$:TSTB @$PS.Status  # check loading status
         BMI  30$
       #-------------------------------------------------------------------------
-      # PPU will clear the value when finishes initialization
+      # PPU will clear the value after it finishes initialization
         MOV  $-1,@$PPUCommandArg
-      # execute the PPU module
         MOV  $PPUModule_PS,@$ParamsAddr+4
-        CALL PPEXEC
+        CALL PPEXEC # execute the PPU module
 
         WaitForPPUInit:
             TST  @$PPUCommandArg
         BNZ  WaitForPPUInit
       #-------------------------------------------------------------------------
-        MOV  $main.bin,R0
+       #MOV  $loader.bin,R0
+       #CALL LoadDiskFile.Start
+       #CALL LoadDiskFile.WaitForFinish
+      #-------------------------------------------------------------------------
+       #JMP  @$LOADER_START
+      #-------------------------------------------------------------------------
+       #MOV  $player.bin,R0
+       #CALL LoadDiskFile.Start
+       #CALL LoadDiskFile.WaitForFinish
+      #-------------------------------------------------------------------------
+       #JMP  @$PLAYER_START
+      #-------------------------------------------------------------------------
+        MOV  $title.bin,R0
         CALL LoadDiskFile.Start
         CALL LoadDiskFile.WaitForFinish
       #-------------------------------------------------------------------------
-        JMP  @$CORE_START
-      #-------------------------------------------------------------------------
+        JMP  @$PLAYER_START
+
 
 LoadDiskFile.Start: # ----------------------------------------------------------
         MOV  (R0)+,@$PS.CPU_RAM_Address
@@ -69,7 +80,7 @@ LoadDiskFile.Start: # ----------------------------------------------------------
         BISB R2,@$PS.DeviceNumber        # head (0, 1)
 
         MOVB $-1,@$PS.Status
-       .ppudo_ensure $PPU_LoadDiskFile,$ParamsStruct
+       .ppudo_ensure $PPU.LoadDiskFile,$ParamsStruct
         RETURN
 LoadDiskFile.WaitForFinish: #---------------------------------------------------
         10$:
@@ -101,14 +112,14 @@ PrintTitleStr:
         BR   10$
 1237$:  RETURN
 TitleStr: #---------------------------------------------------------------------
-       .asciz "My First Demo"
+       .asciz "timeCS is loading..."
        .even
 #-------------------------------------------------------------------------------
 PPEXEC: #-----------------------------------------------------------------------
         MOV  $PPUModule_PS,@$ParamsAddr+4
         CALL Channel2Send                 # => Send request to PPU
                                           # PS.A1 contains address of allocated area
-        MOV  $FB1,@$PPUModule_PS.A2       # Arg 2 - addr of mem block in CPUs RAM
+        MOV  $PPU_MODULE_LOADING_ADDR,@$PPUModule_PS.A2   # Arg 2 - addr of mem block in CPUs RAM
         MOV  $PPU_ModuleSizeWords,@$PPUModule_PS.A3 # Arg 3 - size of mem block, words
         MOVB $020, @$PPUModule_PS.Request # 020 - CPU to PPU memory copy
         CALL Channel2Send                 # => Send request to PPU
@@ -126,7 +137,7 @@ ParamsStruct:
     PS.DeviceType:      .byte  02        # double sided disk
     PS.DeviceNumber:    .byte  0x00 | 0  # bit 7: side(0-bottom, 1-top) ∨ drive number(0-3)
     PS.AddressOnDevice: .byte  0,2       # track 0(0-79), sector 2(1-10)
-    PS.CPU_RAM_Address: .word  FB1
+    PS.CPU_RAM_Address: .word  PPU_MODULE_LOADING_ADDR
     PS.WordsCount:      .word  PPU_ModuleSizeWords # number of words to transfer
 
 PPUModule_PS:
@@ -139,11 +150,19 @@ PPUModule_PS:
     PPUModule_PS.Type:    .byte  032 # device type - PPU RAM
     PPUModule_PS.No:      .byte  0   # device number
     PPUModule_PS.A1:      .word  0   # Argument 1
-    PPUModule_PS.A2:      .word  PPU_UserRamSizeWords   # Argument 2
+    PPUModule_PS.A2:      .word  PPU_UserRamSizeWords # Argument 2
     PPUModule_PS.A3:      .word  0   # Argument 3
 #-------------------------------------------------------------------------------
-main.bin:
-    .word CORE_START
+loader.bin:
+    .word LOADER_START
+    .word 0
+    .word 0
+player.bin:
+    .word PLAYER_START
+    .word 0
+    .word 0
+title.bin:
+    .word PLAYER_START
     .word 0
     .word 0
 #-------------------------------------------------------------------------------

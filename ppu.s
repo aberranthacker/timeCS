@@ -1,4 +1,4 @@
-               .nolist
+               .list
 
                .title Chibi Akumas PPU module
 
@@ -8,7 +8,7 @@
 
                .include "macros.s"
                .include "hwdefs.s"
-               .include "core_defs.s"
+               .include "defs.s"
 
                .equiv  PPU_ModuleSize, (end - start)
                .equiv  PPU_ModuleSizeWords, PPU_ModuleSize >> 1
@@ -282,12 +282,9 @@ SLTABInit:
 
 AberrantSoundModulePresent:
         CLR  @$Trap4Detected
-        MOV  R1,@$PLY_AKG_PSGAddress
-        MOV  R2,@$PLY_SE_PSGAddress
+        MOV  R1,@$psgplayer.PSG0
+        MOV  R2,@$psgplayer.PSG1
         MOV  $0173362,@$4 # restore back Trap 4 handler
-
-       #MOV  $SoundEffects,R5
-       #CALL PLY_SE_InitSoundEffects # initialize sound effects player
 
         MOV  $VblankIntHandler,@$0100
       # inform loader that PPU is ready to receive commands
@@ -308,7 +305,7 @@ Queue_Loop:
         MOV  R5,(R4)
         #MTPS $PR0
     .ifdef DebugMode
-        CMP  R1,$PPU_LastJMPTableIndex
+        CMP  R1,$PPU.LastJMPTableIndex
         BHI  .
     .endif
         CALL @CommandVectors(R1)
@@ -317,7 +314,9 @@ Queue_Loop:
 #-------------------------------------------------------------------------------
 CommandVectors:
        .word LoadDiskFile
-       .word SetPalette            # PPU_SetPalette
+       .word SetPalette            # PPU.SetPalette
+       .word psgplayer.MUS_INIT
+       .word psgplayer.Play
 #-------------------------------------------------------------------------------
 SetPalette: #----------------------------------------------------------------{{{
         PUSH @$PASWCR
@@ -439,26 +438,28 @@ ClearOffscreenArea: # -------------------------------------------------------{{{
 
         RETURN
 #----------------------------------------------------------------------------}}}
+psgplayer.Play:
+        MOV  $psgplayer.MUS_PLAY,@$PlayMusicProc
+        MOV  $CPU.Title.PLAY_NOW, @$PBPADR
+        INC  @$PBP12D
+        INC  @$PLAY_NOW
+        RETURN
 LoadDiskFile: # -------------------------------------------------------------{{{
         MOV  $1,@$VblankInt_SkipMusic
         MOV  R0,@$023200 # set ParamsStruct address for firmware proc to use
         CALL @$0125030   # firmware proc that handles channel 2
        #CALL @07132      # stop floppy drive spindle
-        CALL @$0134454   # stop floppy drive spindle
+       #CALL @$0134454   # stop floppy drive spindle
         CLR  @$VblankInt_SkipMusic
         RETURN
 #----------------------------------------------------------------------------}}}
+NULL:   RETURN
 
        .include "ppu/interrupts_handlers.s"
-       .include "akg_player.s"
-       .include "player_sound_effects.s"
-
-CGAFontBitmap: .incbin "resources/cga8x8b.raw"
-
-CharLinesTable:
-    .word 0x0000, 0x0140, 0x0280, 0x03C0, 0x0500, 0x0640, 0x0780, 0x08C0, 0x0A00, 0x0B40
-    .word 0x0C80, 0x0DC0, 0x0F00, 0x1040, 0x1180, 0x12C0, 0x1400, 0x1540, 0x1680, 0x17C0
-    .word 0x1900, 0x1A40, 0x1B80, 0x1CC0, 0x1E00
+      #.include "akg_player.s"
+      #.include "player_sound_effects.s"
+       .include "psgplayer.s"
+      #.include "pt3play2.s"
 
 DummyPSG: .word 0
 
@@ -466,7 +467,5 @@ CommandsQueue_Top:
        .space 2*2*16
 CommandsQueue_Bottom:
 
-StrBuffer:
-       .even
 end:
        .nolist

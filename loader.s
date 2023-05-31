@@ -1,24 +1,24 @@
        .list
 
-       .title My First Demo Core Module
+       .title Loader
 
        .include "hwdefs.s"
        .include "macros.s"
-       .include "core_defs.s"
+       .include "defs.s"
 
        .global start
 
 
-       .=CORE_START
+       .=LOADER_START
 
 start:
         MTPS $PR0
         MOV  $0xE000,SP
       # clear screen
-        MOV  $(288 * MAIN_SCREEN_LINES_COUNT) >> 3 >> 2 + 1,R1 # (18432 + 8) / 8 / 4
+        MOV  $FB_SIZE,R1
         MOV  $FB0,R5
         100$:
-           .rept 4
+           .rept 1
             CLR  (R5)+
            .endr
         SOB  R1,100$
@@ -35,12 +35,12 @@ start:
             ADD  $LINE_WIDTHB - (128 >> 2),R5
         SOB  R1,200$
 
-       .ppudo $PPU_SetPalette, $title_palette
+       .ppudo $PPU.SetPalette, $title_palette
 
         MOV  $32,R2
         MOV  $9,R3
         ASL  R3
-        #:bpt
+
         CALL DIV_FUNC
         # R2 - 0
         # R3 - 9
@@ -145,21 +145,7 @@ PROGRESS_BAR_DISPLAY:
 
         RETURN
 
-Core.random_word:
-       .equiv Core.random_word.seed1, .+2
-        MOV $0xB7D9, R0
-        ADD R0, R0
-        BHI 1$
-        ADD $39, R0
-    1$:
-        MOV R0, @$Core.random_word.seed1
-       .equiv Core.random_word.seed2, .+2
-        ADD $0xF61F, R0
-        MOV R0, @$Core.random_word.seed2
-        RETURN
-
-
-title_palette: #-----------------------------------------------------------------
+title_palette: #----------------------------------------------------------------
     .word      0, setCursorScalePalette, cursorGraphic, scale320 | rGB
     .word      1, setColors; .byte Black, brRed, brGreen, White
     .word 128+ 6, setCursorScalePalette, cursorGraphic, scale320 | RGB
@@ -168,7 +154,6 @@ title_palette: #----------------------------------------------------------------
     .word untilEndOfScreen
 #-------------------------------------------------------------------------------
 progress_bar_arg: .space 4 * 2
-screen_lines_table: .screen_lines_table
 gfx_c2ay_toyhifi: .incbin "build/c2ay_toyhifi.raw"
 
 end:

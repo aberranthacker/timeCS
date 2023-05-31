@@ -1,3 +1,10 @@
 build/bootsector.bin
 build/ppu_module.bin
-build/main.bin
+build/loader.bin
+build/title.bin
+build/player.bin
+songs/f7001.lzsa
+songs/f7002.lzsa
+songs/f7003.lzsa
+songs/f7004.lzsa
+build/w3.raw.lzsa

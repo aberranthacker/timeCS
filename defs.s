@@ -5,23 +5,34 @@
 #-------------------------------------------------------------------------------
 .equiv CPU_PPUCommandArg, PPUCommandArg >> 1
 
-.equiv PPU_LoadDiskFile,       0
-.equiv PPU_SetPalette,         2
+.equiv PPU.LoadDiskFile,       0
+.equiv PPU.SetPalette,         2
+.equiv PPU.PSGP_Player.Init,   4
+.equiv PPU.PSGP_Player.Play,   6
 
-.equiv PPU_LastJMPTableIndex, 2
+.equiv PPU.LastJMPTableIndex, 6
 
-.equiv PPU_SET_FB0_VISIBLE, 0
-.equiv PPU_SET_FB1_VISIBLE, 1
+.equiv PPU.SET_FB0_VISIBLE, 0
+.equiv PPU.SET_FB1_VISIBLE, 1
 #-------------------------------------------------------------------------------
 .equiv ExtMemSizeBytes, 7168
 #-------------------------------------------------------------------------------
+.equiv MAIN_SCREEN_LINES_COUNT, 256
+.equiv AUX_SCREEN_LINES_COUNT, 288 - MAIN_SCREEN_LINES_COUNT
+.equiv LINE_WIDTHB, 72
 # CPU memory map ---------------------------------------------------------------
+.equiv DUMMY_INTERRUPT_HANDLER, 040 # 32 0x20 loads from bootsector
 .equiv PPUCommandArg, 046 # 38 0x26 command for PPU argument
-.equiv FB0, 0600 # 0384 0x0180
-.equiv FB_GAP, FB0 + 16000
-.equiv FB1, FB_GAP + 384
+.equiv FB_SIZE, MAIN_SCREEN_LINES_COUNT * LINE_WIDTHB
+.equiv FB_SIZE_WORDS, FB_SIZE >> 1
+.equiv FB0, 0600 + 8 # 0384 0x0180
+.equiv FB1_OFFSET, FB_SIZE + 8
+.equiv FB1, FB0 + FB1_OFFSET
+.equiv DEFAULT_FB, FB0 - 8
 
-.equiv CORE_START, 32768
+.equiv LOADER_START, FB1 + (288 * 164) >> 2 # 044610 18824 0x4988
+.equiv PLAYER_START, FB1 + FB_SIZE
+.equiv TITLE_START, FB1 + FB_SIZE
 # 0160000 57344 0xE000 end of RAM ----------------------------------------------
 #-------------------------------------------------------------------------------
 .equiv PPU_UserRamSize,  0054104 # 22596 0x5844
@@ -35,15 +46,9 @@
 #-------------------------------------------------------------------------------
 # VRAM memory map --------------------------------------------------------------
 .equiv SLTAB, 0140000 # 32768 0x8000 # bank 0
-.equiv BootstrapCopyAddr, 0100000 # banks 1 and 2
 .equiv AUX_SCREEN_ADDR, 0160000 # 49152 0xC000 # banks 0, 1 and 2
 #-end of VRAM memory map--------------------------------------------------------
 #-------------------------------------------------------------------------------
-.equiv MAIN_SCREEN_LINES_COUNT, 256
-.equiv AUX_SCREEN_LINES_COUNT, 288 - MAIN_SCREEN_LINES_COUNT
-.equiv DEFAULT_FB, FB0
-.equiv LINE_WIDTHB, 72
-
 .equiv setCursorScalePalette, 0
 .equiv cursorGraphic, 0x10 # 020 dummy parameter
 .equiv scale640, 0x00
@@ -119,13 +124,6 @@
 .equiv untilLine, -1 << 8
 .equiv untilEndOfScreen, MAIN_SCREEN_LINES_COUNT + 1
 .equiv endOfScreen, MAIN_SCREEN_LINES_COUNT + 1
-#-------------------------------------------------------------------------------
-.equiv COIN_COST, 4
-
-.equiv SPR_TURBO,    0
-.equiv SPR_DOUBLE,   1<<1
-.equiv SPR_PSET,     1<<2
-.equiv SPR_HAS_MASK, 1<<3
 #-------------------------------------------------------------------------------
 .equiv NOP_OPCODE, 000240
 .equiv INC_R0_OPCODE, 0005200

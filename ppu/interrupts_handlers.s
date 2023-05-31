@@ -8,7 +8,7 @@ Trap4: .equiv Trap4Detected, .+4
 VblankIntHandler: #----------------------------------------------------------{{{
        .equiv VblankInt_SkipMusic, .+2
         TST  $1
-        BNZ  VblankInt_MinimalHandler
+        BNZ  VblankInt_MinimalHandler # skip while floppy disk IO in progress
 
         MOV  @$PBPADR,-(SP)
         MOV  R5,-(SP)
@@ -17,6 +17,13 @@ VblankIntHandler: #----------------------------------------------------------{{{
         MOV  R2,-(SP)
         MOV  R1,-(SP)
         MOV  R0,-(SP)
+
+       .equiv PLAY_NOW, .+2
+        TST  $0
+        BZE  VblankInt_Finalize
+
+       .equiv PlayMusicProc, .+2
+        CALL @$NULL
 
 VblankInt_Finalize:
         MOV  (SP)+,R0
@@ -28,13 +35,13 @@ VblankInt_Finalize:
         MOV  (SP)+,@$PBPADR
 
 VblankInt_MinimalHandler:
-#     # we do not need firmware interrupt handler except for this small
-#     # procedure
-#       TST  @$07130 # is floppy drive spindle rotating?
-#       BZE  1237$   # no
-#       DEC  @$07130 # decrease spindle rotation counter
-#       BNZ  1237$   # continue rotation unless the counter reaches zero
-#       CALL @07132  # stop floppy drive spindle
+      # we do not need firmware interrupt handler except for this small
+      # procedure
+        TST  @$07130 # is floppy drive spindle rotating?
+        BZE  1237$   # no
+        DEC  @$07130 # decrease spindle rotation counter
+        BNZ  1237$   # continue rotation unless the counter reaches zero
+        CALL @07132  # stop floppy drive spindle
 
 1237$:  RTI
 #----------------------------------------------------------------------------}}}
