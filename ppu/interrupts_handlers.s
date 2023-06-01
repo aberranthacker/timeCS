@@ -146,7 +146,7 @@ Channel1In_IntHandler: #-----------------------------------------------------{{{
 ShowFB0: #----------------------------------------------------------------------
         MOV  $0x20,R0
         MOV  $8,R1 # length of the screenlines table record
-        MOV  $200>>3,R2
+        MOV  $MAIN_SCREEN_LINES_COUNT>>3,R2
         MOV  $PBP0DT,R4
         MOV  $PBPADR,R5
        .equiv FirstMainScreenLinePointer, .+2
@@ -163,8 +163,8 @@ ShowFB0: #----------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 ShowFB1: #----------------------------------------------------------------------
         MOV  $0x20,R0
-        MOV  $8,R1
-        MOV  $200>>3,R2
+        MOV  $8,R1 # length of the screenlines table record
+        MOV  $MAIN_SCREEN_LINES_COUNT>>3,R2
         MOV  $PBP0DT,R4
         MOV  $PBPADR,R5
         MOV  @$FirstMainScreenLinePointer,(R5)

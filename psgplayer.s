@@ -160,13 +160,13 @@ MUS_COM_END:
         DEC  (R0)+
         BZE  MUS_CALL_RET
 
-        TST  (R0)+           #ADD $2, R0
+        TST  (R0)+ # ADD $2, R0
         SOB  R3, 10$
 1$:     RETURN
 
 MUS_CALL_RET:
         MOV  (R0), R2
-        TST  -(R0)           #SUB $2,R0
+        TST  -(R0) # SUB $2,R0
         MOV  R0, CUR_MUS_STACK_ADDR(R5)
         MOV  R2, CUR_MUS_ADDR(R5)
         RETURN

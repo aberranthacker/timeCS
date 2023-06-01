@@ -66,8 +66,9 @@ build/bootsector.o : $(COMMON) \
 # bootsector.bin ------------------------------------------------------------}}}
 
 # ppu_module.bin ------------------------------------------------------------{{{
-build/ppu_module.bin : build/ppu.o
-	$(LD) $(LDFLAGS) -T linker_scripts/ppu.cmd -R build/main.o -R build/title.o
+build/ppu_module.bin : build/ppu.o \
+	               build/title.o
+	$(LD) $(LDFLAGS) -T linker_scripts/ppu.cmd -R build/title.o
 	ruby $(AOUT2SAV) build/ppu.out -b -s -o build/ppu_module.bin
 build/ppu.o : $(COMMON) \
               ppu.s \
@@ -125,18 +126,18 @@ build/title.bin : build/title.o
 build/title.o : $(COMMON) \
                 title.s \
                 unlzsa3.s \
-		build/timecs1.raw \
-		build/timecs1m.raw \
-		build/timecs2.raw \
-		build/timecs2m.raw \
-		build/timecs3.raw \
-		build/timecs3m.raw \
-		build/timecs4.raw \
-		build/timecs4m.raw \
-		build/timecs5.raw \
-		build/timecs5m.raw \
-		build/timecs6.raw \
-		build/timecs6m.raw \
+		build/timecs_t.raw \
+		build/timecs_t_mask.raw \
+		build/timecs_i.raw \
+		build/timecs_i_mask.raw \
+		build/timecs_m.raw \
+		build/timecs_m_mask.raw \
+		build/timecs_e.raw \
+		build/timecs_e_mask.raw \
+		build/timecs_C.raw \
+		build/timecs_C_mask.raw \
+		build/timecs_S.raw \
+		build/timecs_S_mask.raw \
 		build/clockhand.raw \
 		build/w3.raw.lzsa
 	$(AS) title.s $(INCS) -al -o build/title.o | $(FORMAT_LIST)
@@ -148,30 +149,33 @@ build/w3.raw.lzsa : build/w3.raw
 	$(LZSA3) build/w3.raw build/w3.raw.lzsa
 build/w3.raw : $(BMP_TO_RAW) gfx/w3.bmp
 	$(BMP_TO_RAW) gfx/w3.bmp build/w3.raw
-build/timecs1.raw : $(BMP_TO_RAW) gfx/timecs1.bmp
-	$(BMP_TO_RAW) gfx/timecs1.bmp build/timecs1.raw
-build/timecs1m.raw : $(BMP_TO_RAW) gfx/timecs1m.bmp
-	$(BMP_TO_RAW) gfx/timecs1m.bmp build/timecs1m.raw
-build/timecs2.raw : $(BMP_TO_RAW) gfx/timecs2.bmp
-	$(BMP_TO_RAW) gfx/timecs2.bmp build/timecs2.raw
-build/timecs2m.raw : $(BMP_TO_RAW) gfx/timecs2m.bmp
-	$(BMP_TO_RAW) gfx/timecs2m.bmp build/timecs2m.raw
-build/timecs3.raw : $(BMP_TO_RAW) gfx/timecs3.bmp
-	$(BMP_TO_RAW) gfx/timecs3.bmp build/timecs3.raw
-build/timecs3m.raw : $(BMP_TO_RAW) gfx/timecs3m.bmp
-	$(BMP_TO_RAW) gfx/timecs3m.bmp build/timecs3m.raw
-build/timecs4.raw : $(BMP_TO_RAW) gfx/timecs4.bmp
-	$(BMP_TO_RAW) gfx/timecs4.bmp build/timecs4.raw
-build/timecs4m.raw : $(BMP_TO_RAW) gfx/timecs4m.bmp
-	$(BMP_TO_RAW) gfx/timecs4m.bmp build/timecs4m.raw
-build/timecs5.raw : $(BMP_TO_RAW) gfx/timecs5.bmp
-	$(BMP_TO_RAW) gfx/timecs5.bmp build/timecs5.raw
-build/timecs5m.raw : $(BMP_TO_RAW) gfx/timecs5m.bmp
-	$(BMP_TO_RAW) gfx/timecs5m.bmp build/timecs5m.raw
-build/timecs6.raw : $(BMP_TO_RAW) gfx/timecs6.bmp
-	$(BMP_TO_RAW) gfx/timecs6.bmp build/timecs6.raw
-build/timecs6m.raw : $(BMP_TO_RAW) gfx/timecs6m.bmp
-	$(BMP_TO_RAW) gfx/timecs6m.bmp build/timecs6m.raw
+
+build/timecs_t_mask.raw : $(BMP_TO_RAW) gfx/timecs_t_mask.bmp
+	$(BMP_TO_RAW) gfx/timecs_t_mask.bmp build/timecs_t_mask.raw
+build/timecs_i_mask.raw : $(BMP_TO_RAW) gfx/timecs_i_mask.bmp
+	$(BMP_TO_RAW) gfx/timecs_i_mask.bmp build/timecs_i_mask.raw
+build/timecs_m_mask.raw : $(BMP_TO_RAW) gfx/timecs_m_mask.bmp
+	$(BMP_TO_RAW) gfx/timecs_m_mask.bmp build/timecs_m_mask.raw
+build/timecs_e_mask.raw : $(BMP_TO_RAW) gfx/timecs_e_mask.bmp
+	$(BMP_TO_RAW) gfx/timecs_e_mask.bmp build/timecs_e_mask.raw
+build/timecs_C_mask.raw : $(BMP_TO_RAW) gfx/timecs_C_mask.bmp
+	$(BMP_TO_RAW) gfx/timecs_C_mask.bmp build/timecs_C_mask.raw
+build/timecs_S_mask.raw : $(BMP_TO_RAW) gfx/timecs_S_mask.bmp
+	$(BMP_TO_RAW) gfx/timecs_S_mask.bmp build/timecs_S_mask.raw
+
+build/timecs_t.raw : $(BMP_TO_RAW) gfx/timecs_t.bmp
+	$(BMP_TO_RAW) -b 1 gfx/timecs_t.bmp build/timecs_t.raw
+build/timecs_i.raw : $(BMP_TO_RAW) gfx/timecs_i.bmp
+	$(BMP_TO_RAW) -b 1 gfx/timecs_i.bmp build/timecs_i.raw
+build/timecs_m.raw : $(BMP_TO_RAW) gfx/timecs_m.bmp
+	$(BMP_TO_RAW) -b 1 gfx/timecs_m.bmp build/timecs_m.raw
+build/timecs_e.raw : $(BMP_TO_RAW) gfx/timecs_e.bmp
+	$(BMP_TO_RAW) -b 1 gfx/timecs_e.bmp build/timecs_e.raw
+build/timecs_C.raw : $(BMP_TO_RAW) gfx/timecs_C.bmp
+	$(BMP_TO_RAW) -b 1 gfx/timecs_C.bmp build/timecs_C.raw
+build/timecs_S.raw : $(BMP_TO_RAW) gfx/timecs_S.bmp
+	$(BMP_TO_RAW) -b 1 gfx/timecs_S.bmp build/timecs_S.raw
+
 build/clockhand.raw : $(BMP_TO_RAW) gfx/clockhand.bmp
 	$(BMP_TO_RAW) gfx/clockhand.bmp build/clockhand.raw
 
