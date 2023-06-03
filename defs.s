@@ -20,6 +20,7 @@
 .equiv MAIN_SCREEN_LINES_COUNT, 256
 .equiv AUX_SCREEN_LINES_COUNT, 288 - MAIN_SCREEN_LINES_COUNT
 .equiv LINE_WIDTHB, 72
+.equiv LINE_WIDTHW, LINE_WIDTHB >> 1
 # CPU memory map ---------------------------------------------------------------
 .equiv DUMMY_INTERRUPT_HANDLER, 040 # 32 0x20 loads from bootsector
 .equiv PPUCommandArg, 046 # 38 0x26 command for PPU argument

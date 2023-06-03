@@ -25,6 +25,7 @@
 
            .=TITLE_START
 start:
+# INIT ----------------------------------------------------------------------{{{
         MOV  $(FB_SIZE_WORDS + 4) >> 2,R1
         MOV  $FB0-8,R5
         100$:
@@ -109,6 +110,7 @@ PREP_MAIN_LOOP:
         SOB R0, 1$
        .ppudo $PPU.PSGP_Player.Play
         WAIT
+# INIT ----------------------------------------------------------------------}}}
 
 MAIN_LOOP:
         TST Title.PLAY_NOW
@@ -119,53 +121,228 @@ MAIN_LOOP:
     10$:CMP FRAME_NUMBER, $9858
         BGE 100$
 
-       #BIT $0100, @$0177716 # check if a key was pressed
-       #BNE 1$
-
-       #CLR PLAY_NOW # stop playing if a key was pressed
+       #BIT $0100, @$0177716 # is a key was pressed?
+       #BNZ 1$       # no, continue
+       #CLR PLAY_NOW # yes, stop playing
 
     1$: CALL DISPLAY_timeCS
-##
-##             CALL DISPLAY_CLOCK
-##
-##             CMP FRAME_NUMBER, $768
-##             BLO 2$
-##
-##             MOV $2, DUMMY1
-##             MOV $044, DUMMY1 + 4
-##             MOV $2, DUMMY2
-##
-##         2$: MOV (PC)+, R0
-##         DOTS_OFFSET:    .word 0
-##             ADD $020, R0
-##             CMP R0, $020 * 3
-##             BLO 10$
-##             CLR R0
-##         10$:MOV R0, DOTS_OFFSET
-##
-##             ADD $DOTS, R0
-##             MOV R0, CODE_MODIFY + 2
-##
-##     DISPLAY_CIRCLES:
-##             MOV $TUNNEL, R4
-##
-##         10$:MOV (R4)+, R0
-##             BEQ MAIN_LOOP
-##
-##             ADD R0, (R4)
-##             MOV (R4)+, R1
-##             CMP R1, (R4)+
-##             BLO 1$
-##
-##             MOV (R4), R1
-##         1$: TST (R4)+
-##             MOV R1, -6(R4)
-##             MOV (R4)+, CIRCLE_FORMER
-##             CALL DRAW_CIRCLE_OPER
-##             BR 10$
-               br MAIN_LOOP
+        CALL DISPLAY_CLOCK
 
-DISPLAY_timeCS:
+        CMP  FRAME_NUMBER, $768
+        BLO  2$
+
+        MOV  $2, DUMMY1       # increment
+        MOV  $044, DUMMY1 + 4 # max value
+        MOV  $2, DUMMY2       # replace end of table marker with increment
+
+       .equiv DOTS_OFFSET, .+2
+    2$: MOV  $0, R0
+        ADD  $020, R0
+       .equiv DOTS_SIZE, DOTS_END - DOTS
+        CMP  R0, $DOTS_SIZE # at the end of DOTS?
+        BLO  3$             # no, continue
+        CLR  R0             # yes, reset the offset
+
+    3$: MOV  R0, DOTS_OFFSET
+
+        ADD  $DOTS, R0
+        MOV  R0, DOTS_ADDR_PLUS_OFFSET
+
+DISPLAY_CIRCLES:
+        MOV  $TUNNEL, R4
+
+   100$:MOV  (R4)+, R0  # increment -> R0
+        BZE  MAIN_LOOP
+
+        ADD  R0, (R4)   # current_value += increment
+        MOV  (R4)+, R1  # current_value -> R1
+
+        CMP  R1, (R4)+  # current_value reached max_value?
+        BLO  1$         # no, continue
+        MOV  (R4), R1   # yes, max_value -> R1
+
+    1$: TST  (R4)+      # advance pointer to FB offset
+        MOV  R1, -6(R4) # store update current_value
+        MOV  (R4)+, CIRCLE_FORMER # FB offset -> CIRCLE_FORMER
+        CALL DRAW_CIRCLE_OPER
+        BR 100$
+
+TUNNEL:
+    DUMMY1:# increment, current_value, max_value, value_reset, FB offset
+       .word         3,           026,       040,         026, LINE_WIDTHB * 40
+    DUMMY2:
+       .word         0,           032,       040,         032, LINE_WIDTHB * 36
+       .word         3,           040,       052,         040, LINE_WIDTHB * 32
+       .word         5,           046,       062,         046, LINE_WIDTHB * 32
+TUNNEL_END:
+        .word 0 # end of data marker
+
+DRAW_CIRCLE_OPER:
+           #MOVB $014, @$0177663
+            PUSH R4
+            PUSH R5
+            CALL DRAW_CIRCLE
+            POP  R5
+            POP  R4
+           #MOVB @BK11_PALETTE_IDX, R0
+           #BEQ 10$
+
+           #MOVB R0, @$0177663
+        10$:RETURN
+
+DRAW_CIRCLE:
+            CLR  R0
+            CLR  R4
+            MOV  R1, R3
+            ASL  R3
+            MOV  R3, R5
+    CIRCLE_LOOP:
+           .equiv CIRCLE_FORMER, .+2
+            SUB  $LINE_WIDTHB * 36, R4
+            ADD  R4, R3
+            BCS  10$
+
+            TST  -(R5)
+            ADD  R5, R3
+            DEC  R1
+        10$:PUSH R0
+            PUSH R1
+            COM  $0
+            BZE  1$
+
+            CALL DRAW_DOTS
+            BR   2$
+
+        1$: MOV  R0, R2
+            MOV  R1, R0
+            MOV  R2, R1
+            CALL DRAW_DOTS
+        2$: POP  R1
+            POP  R0
+            INC  R0
+            MOV  R0, R2
+            INC  R2
+            CMP  R2, R1
+            BLE CIRCLE_LOOP
+
+DRAW_DOTS:
+            CALL DRAW_DOT
+            NEG  R1
+            CALL DRAW_DOT
+            NEG  R0
+            CALL DRAW_DOT
+            NEG  R1
+DRAW_DOT:
+            PUSH R3
+            MOV  $64, R2 # X
+            MOV  R2, R3  # Y
+            ADD  R1, R3
+            MUL  $LINE_WIDTHW * 8, R3
+
+            ADD  R0, R2
+            ADD  R2, R3
+            ASR  R3
+
+           .equiv SCREEN_ADDER, .+2 # will be changed by END_OF_PART
+            ADD  $FB0 + LINE_WIDTHB * 8, R3
+            BR   10$ # will be replaced with NOP by END_OF_PART
+
+            MOV  FB0(R3), (R3)
+           .set offset, LINE_WIDTHB * 2
+            MOV  FB0 + offset(R3), offset(R3)
+            MOV  FB0 - offset(R3), -offset(R3)
+            MOV  FB0 + 2(R3), 2(R3)
+            BR   DRAW_DOT_EXIT
+
+        10$:BIC  $0177770, R2
+            ASL  R2
+
+           .equiv DOTS_ADDR_PLUS_OFFSET, .+2
+            MOV  DOTS(R2), R2
+            XOR  R2, (R3)
+            XOR  R2, 2(R3)
+    DRAW_DOT_EXIT:
+            POP  R3
+            RETURN
+DOTS:
+       .word 0b0000000000000001
+       .word 0b0000000000000010
+       .word 0b0000000000000100
+       .word 0b0000000000001000
+       .word 0b0000000000010000
+       .word 0b0000000000100000
+       .word 0b0000000001000000
+       .word 0b0000000010000000
+
+       .word 0b0000000100000000
+       .word 0b0000001000000000
+       .word 0b0000010000000000
+       .word 0b0000100000000000
+       .word 0b0001000000000000
+       .word 0b0010000000000000
+       .word 0b0100000000000000
+       .word 0b1000000000000000
+
+       .word 0b0000000100000001
+       .word 0b0000001000000010
+       .word 0b0000010000000100
+       .word 0b0000100000001000
+       .word 0b0001000000010000
+       .word 0b0010000000100000
+       .word 0b0100000001000000
+       .word 0b1000000010000000
+DOTS_END:
+
+MOSAIC: #--------------------------------------------------------------------{{{
+        MOV  $FB0-8,R5
+        MOV  $GFX_W3, R4
+        MOV  $BLOCKS_SCRIPT, R3
+        MOV  $64,R2
+    10$:MOV  (R3)+, R0
+        BZE  4$
+
+        1$:
+            WAIT
+            ADD  (R3), R5
+            PUSH R5
+
+            MOV  $32,R1
+            3$:
+                .rept 4
+                 MOV FB1_OFFSET(R5),(R5)+
+                .endr
+                 ADD R2,R5
+            SOB  R1,3$
+
+            POP  R5
+        SOB  R0,1$
+
+        INC  R3
+        INC  R3
+        BR   10$
+
+    4$: RETURN
+
+BLOCKS_SCRIPT:
+       .word   8,     8
+       .word   7,  2048 + 32 * 8
+       .word   7,    -8
+       .word   6, -2048 - 32 * 8
+       .word   6,     8
+       .word   5,  2048 + 32 * 8
+       .word   5,    -8
+       .word   4, -2048 - 32 * 8
+       .word   4,     8
+       .word   3,  2048 + 32 * 8
+       .word   3,    -8
+       .word   2, -2048 - 32 * 8
+       .word   2,     8
+       .word   1,  2048 + 32 * 8
+       .word   1,    -8
+       .word   0
+# MOSAIC --------------------------------------------------------------------}}}
+
+DISPLAY_timeCS: #------------------------------------------------------------{{{
        .equiv NEXT_FRAME_NUMBER_A, .+4
         CMP  FRAME_NUMBER, $384 >> 1
         BLT  1237$
@@ -238,108 +415,71 @@ SCREEN_LOCATION_timeCS:
        .word FB0 + 2 + (LINE_WIDTHB *  32), 48 >> 3, 43
        .word FB0 + 6 + (LINE_WIDTHB *   8), 40 >> 3, 46
        .word 0
+# DISPLAY_timeCS ------------------------------------------------------------}}}
 
-## DISPLAY_CLOCK:
-##             CMP FRAME_NUMBER, $6
-##             BLO 9$
-##             ADD $6, .-4
-##
-##             MOV $CLOCKHANDS_DATA, R5
-##         10$:MOV (R5)+, R1
-##             BEQ 3$
-##         1$: ADD $0100, R1
-##             CMP R1, (R5)+
-##             BLO 2$
-##             MOV (R5)+, -6(R5)
-##             BR 10$
-##         2$: MOV R1, -4(R5)
-##
-##         3$: MOV $0100000 + (224 >> 2) + (64*210), R1
-##             MOV $CLOCKHAND_BUFFER, R0
-##             MOV $020, R2
-##             MOV $0100 - 4, R3
-##         4$: MOV (R1)+, (R0)+
-##             MOV (R1)+, (R0)+
-##             ADD R3, R1
-##             SOB R2, 4$
-##
-##             MOV $CLOCKHANDS_DATA, R5
-##         5$: MOV (R5), R1
-##             BEQ 7$
-##             MOV $CLOCKHAND_BUFFER, R0
-##             MOV $040, R2
-##         6$: BIC (R1)+, (R0)+
-##             SOB R2, 6$
-##             ADD $6, R5
-##             BR 5$
-##
-##         7$: MOV $040000 + (224 >> 2) + (64*210), R0
-##             MOV $CLOCKHAND_BUFFER, R1
-##             MOV $020, R2
-##         8$: MOV (R1)+, (R0)+
-##             MOV (R1)+, (R0)+
-##             ADD R3, R0
-##             SOB R2, 8$
-##         9$:
-##             RETURN
-##
-## CLOCKHANDS_DATA:
-##             .word CLOCKHAND_SEC + 0500, CLOCKHAND_SEC + CLOCKHAND_SIZE, CLOCKHAND_SEC
-##             .word CLOCKHAND_MIN + 01400 - 0500, CLOCKHAND_MIN + CLOCKHAND_SIZE, CLOCKHAND_MIN
-##             .word CLOCKHAND_HOUR, CLOCKHAND_HOUR + CLOCKHAND_SIZE, CLOCKHAND_HOUR
-##             .word 0
-##
-MOSAIC:
-            MOV  $FB0-8,R5
-            MOV  $GFX_W3, R4
-            MOV  $BLOCKS_SCRIPT, R3
-            MOV  $64,R2
-        10$:MOV  (R3)+, R0
-            BZE  4$
+DISPLAY_CLOCK: #-------------------------------------------------------------{{{
+       .equiv DISPLAY_CLOCK.next_frame_number, .+4
+        CMP  FRAME_NUMBER, $6
+        BLO  1237$
 
-            1$:
-                WAIT
-                ADD  (R3), R5
-                PUSH R5
+        ADD  $6, DISPLAY_CLOCK.next_frame_number
 
-                MOV  $32,R1
-                3$:
-                    .rept 4
-                     MOV FB1_OFFSET(R5),(R5)+
-                    .endr
-                     ADD R2,R5
-                SOB  R1,3$
+        MOV  $CLOCKHANDS_DATA, R5
+    10$:MOV  (R5)+, R1
+        BEQ  3$
 
-                POP  R5
-            SOB  R0,1$
+    1$: ADD  $LINE_WIDTHB, R1
+        CMP  R1, (R5)+
+        BLO  2$
 
-            INC  R3
-            INC  R3
-            BR   10$
+        MOV  (R5)+, -6(R5)
+        BR   10$
 
-        4$: RETURN
+    2$: MOV  R1, -4(R5)
 
-BLOCKS_SCRIPT:
-           .word   8,     8
-           .word   7,  2048 + 32 * 8
-           .word   7,    -8
-           .word   6, -2048 - 32 * 8
-           .word   6,     8
-           .word   5,  2048 + 32 * 8
-           .word   5,    -8
-           .word   4, -2048 - 32 * 8
-           .word   4,     8
-           .word   3,  2048 + 32 * 8
-           .word   3,    -8
-           .word   2, -2048 - 32 * 8
-           .word   2,     8
-           .word   1,  2048 + 32 * 8
-           .word   1,    -8
-           .word   0
+    3$: MOV  $FB1 + (224 >> 2) + (LINE_WIDTHB * 210), R1
+        MOV  $CLOCKHAND_BUFFER, R0
+        MOV  $020, R2
+        MOV  $LINE_WIDTHB - 4, R3
+        4$:
+            MOV  (R1)+, (R0)+
+            MOV  (R1)+, (R0)+
+            ADD  R3, R1
+        SOB  R2, 4$
 
+        MOV  $CLOCKHANDS_DATA, R5
+    5$: MOV  (R5), R1
+        BEQ  7$
 
-END_OF_PART:
-    br .
+        MOV  $CLOCKHAND_BUFFER, R0
+        MOV  $040, R2
+        6$:
+            BIC  (R1)+, (R0)+
+        SOB  R2, 6$
+
+        ADD  $6, R5
+        BR   5$
+
+    7$: MOV  $FB0 + (224 >> 2) + (LINE_WIDTHB * 210), R0
+        MOV  $CLOCKHAND_BUFFER, R1
+        MOV  $020, R2
+        8$:
+            MOV  (R1)+, (R0)+
+            MOV  (R1)+, (R0)+
+            ADD  R3, R0
+        SOB  R2, 8$
+
+1237$:  RETURN
+
+CLOCKHANDS_DATA:
+       .word CLOCKHAND_SEC + 0500, CLOCKHAND_SEC + CLOCKHAND_SIZE, CLOCKHAND_SEC
+       .word CLOCKHAND_MIN + 01400 - 0500, CLOCKHAND_MIN + CLOCKHAND_SIZE, CLOCKHAND_MIN
+       .word CLOCKHAND_HOUR, CLOCKHAND_HOUR + CLOCKHAND_SIZE, CLOCKHAND_HOUR
+       .word 0
+# DISPLAY_CLOCK -------------------------------------------------------------}}}
+
+END_OF_PART: #---------------------------------------------------------------{{{
+        br .
 ##             MOV $PALETTES_FOR_CHANGE, BK11_PALETTE_IDX
 ##
 ##             TST PLAY_NOW
@@ -382,177 +522,66 @@ END_OF_PART:
 ##
 ##             TRAP 0; .word 06400 #1-7
 ##             JMP @$0100000
-##
-TIKTAK:
-            MOV  R0, -(SP)
-            MOV  R1, -(SP)
-            MOV  R2, -(SP)
-            MOV  R3, -(SP)
-            MOV  R4, -(SP)
-            MOV  R5, -(SP)
+# END_OF_PART ---------------------------------------------------------------}}}
 
-           .equiv Title.PLAY_NOW, .+2
-            TST  $0 # updated by PPU, at least supposed to
-            BZE  TIKTAK_EXIT
+TIKTAK: #--------------------------------------------------------------------{{{
+        MOV  R0, -(SP)
+        MOV  R1, -(SP)
+        MOV  R2, -(SP)
+        MOV  R3, -(SP)
+        MOV  R4, -(SP)
+        MOV  R5, -(SP)
 
-           .equiv FRAME_NUMBER, .+2
-            INC  $-1
+       .equiv Title.PLAY_NOW, .+2
+        TST  $0 # updated by PPU, at least supposed to
+        BZE  TIKTAK_EXIT
 
-            CMP  FRAME_NUMBER, $68
-            BLO  TIKTAK_EXIT
-            CMP  FRAME_NUMBER, $9840
-            BGE  TIKTAK_EXIT
+       .equiv FRAME_NUMBER, .+2
+        INC  $-1
 
-##             ADD $96-18, .-014
-##             MOV (PC)+, R0
-##         BK11_PALETTE_IDX:   .word PALETTES_FOR_CHANGE
-##         10$:MOVB (R0)+, R1
-##             BNE 1$
-##             MOV $PALETTES_FOR_CHANGE, R0
-##             BR 10$
-##         1$: MOV R0, BK11_PALETTE_IDX
-##             MOVB R1, @$0177663
+      .equiv PALETTE_CHANGE_NEXT_FRAME_NUMBER, .+4
+        CMP  FRAME_NUMBER, $68
+        BLO  TIKTAK_EXIT
+
+        CMP  FRAME_NUMBER, $9840
+        BGE  TIKTAK_EXIT
+
+        ADD  $96-18, PALETTE_CHANGE_NEXT_FRAME_NUMBER
+       .equiv BK11_PALETTE_IDX, .+2
+        MOV  $PALETTES_FOR_CHANGE, R0
+    1$: MOVB (R0)+, R1
+        BNZ  2$
+
+        MOV  $PALETTES_FOR_CHANGE, R0
+        BR   1$
+
+    2$: MOV  R0, BK11_PALETTE_IDX
+       #MOVB R1, @$0177663
 
     TIKTAK_EXIT:
-            MOV  (SP)+, R5
-            MOV  (SP)+, R4
-            MOV  (SP)+, R3
-            MOV  (SP)+, R2
-            MOV  (SP)+, R1
-            MOV  (SP)+, R0
+        MOV  (SP)+, R5
+        MOV  (SP)+, R4
+        MOV  (SP)+, R3
+        MOV  (SP)+, R2
+        MOV  (SP)+, R1
+        MOV  (SP)+, R0
 
-            RTI
+        RTI
 
-## PALETTES_FOR_CHANGE:
-##     .byte  014,  014,  014, 0215,  014,  014, 0216, 014
-##     .byte 0203,  014, 0201,  014 , 014,  014, 0202, 014
-##     .byte  014,  014, 0204,  014, 0203, 0203,  014, 014
-##     .byte 0216,  014, 0205,  014,  014, 0206, 0207, 014
-##     .byte  014, 0205, 0205,    0
-##     .even
-##
-## TUNNEL:
-##         DUMMY1:
-##             .word 3, 026, 040, 026, 05000
-##         DUMMY2:
-##             .word 0, 032, 040, 032, 04400
-##             .word 3, 040, 052, 040, 04000
-##             .word 5, 046, 062, 046, 04000
-## TUNNEL_END:
-##             .word 0
-##
-##
-## DRAW_CIRCLE_OPER:
-##             MOVB $014, @$0177663
-##             MOV R4, -(SP)
-##             MOV R5, -(SP)
-##             CALL DRAW_CIRCLE
-##             MOV (SP)+, R5
-##             MOV (SP)+, R4
-##             MOVB @BK11_PALETTE_IDX, R0
-##             BEQ 10$
-##             MOVB R0, @$0177663
-##         10$:RETURN
-## DRAW_CIRCLE:
-##             CLR R0
-##             MOV R1, R3
-##             ASL R3
-##             MOV R0, R4
-##             MOV R1, R5
-##             ASL R5
-##     CIRCLE_LOOP:
-##             SUB (PC)+, R4
-##         CIRCLE_FORMER:  .word 04400
-##             ADD R4, R3
-##             BCS 10$
-##             TST -(R5)
-##             ADD R5, R3
-##             DEC R1
-##         10$:MOV R0, -(SP)
-##             MOV R1, -(SP)
-##             COM $0
-##             BEQ 1$
-##             CALL DRAW_DOTS
-##             BR 2$
-##         1$: MOV R0, R2
-##             MOV R1, R0
-##             MOV R2, R1
-##             CALL DRAW_DOTS
-##         2$: MOV (SP)+, R1
-##             MOV (SP)+, R0
-##             INC R0
-##             MOV R0, R2
-##             INC R2
-##             CMP R2, R1
-##             BLE CIRCLE_LOOP
-## DRAW_DOTS:
-##             CALL DRAW_DOT
-##             NEG R1
-##             CALL DRAW_DOT
-##             NEG R0
-##             CALL DRAW_DOT
-##             NEG R1
-## DRAW_DOT:
-##             MOV R3, -(SP)
-##             MOV $0100, R2
-##             MOV R2, R3
-##             ADD R1, R3
-##             SWAB R3
-##             ADD R0, R2
-##             BIS R2, R3
-##             ASR R3
-##             ADD (PC)+, R3
-##         SCREEN_ADDER:   .word 041000
-##             BR 10$
-##             MOV 040000(R3), (R3)
-##             MOV 040200(R3), 0200(R3)
-##             MOV 040000-0200(R3), -0200(R3)
-##             MOV 040002(R3), 2(R3)
-##             BR DRAW_DOT_EXIT
-##
-##         10$:BIC $0177770, R2
-##             ASL R2
-##         CODE_MODIFY:
-##             MOV DOTS(R2), R2
-##             XOR R2, (R3)
-##             XOR R2, 2(R3)
-##     DRAW_DOT_EXIT:
-##             MOV (SP)+, R3
-##             RETURN
-DOTS:
-       .word 0b0000000100000001
-       .word 0b0000001000000010
-       .word 0b0000010000000100
-       .word 0b0000100000001000
-       .word 0b0001000000010000
-       .word 0b0010000000100000
-       .word 0b0100000001000000
-       .word 0b1000000010000000
-
-       .word 0b0000000000000001
-       .word 0b0000000000000010
-       .word 0b0000000000000100
-       .word 0b0000000000001000
-       .word 0b0000000000010000
-       .word 0b0000000000100000
-       .word 0b0000000001000000
-       .word 0b0000000010000000
-
-       .word 0b0000000100000000
-       .word 0b0000001000000000
-       .word 0b0000010000000000
-       .word 0b0000100000000000
-       .word 0b0001000000000000
-       .word 0b0010000000000000
-       .word 0b0100000000000000
-       .word 0b1000000000000000
-DOTS_END:
+PALETTES_FOR_CHANGE:
+    .byte  014,  014,  014, 0215,  014,  014, 0216, 014
+    .byte 0203,  014, 0201,  014 , 014,  014, 0202, 014
+    .byte  014,  014, 0204,  014, 0203, 0203,  014, 014
+    .byte 0216,  014, 0205,  014,  014, 0206, 0207, 014
+    .byte  014, 0205, 0205,    0
+    .even
+# TIKTAK --------------------------------------------------------------------}}}
 
 # Creates three sets of 2-bit sprites a set of 1-bit sprites
 GFX_timeCS_PREP:
-        MOV $RED_timeCS, R5
+        MOV $RED_timeCS, R3
         MOV $GREEN_timeCS, R4
-        MOV $BLUE_timeCS, R3
+        MOV $BLUE_timeCS, R5
         MOV $GFX_timeCS,R2
         MOV $GFX_timeCS_SIZE_WORDS, R1
         100$:
@@ -568,63 +597,63 @@ GFX_timeCS_PREP:
         RETURN
 
 CLOCKHANDS_GFX_PREP:
-#           MOV  $CLOCKHAND_GFX_END, R1
-#           MOV  $CLOCKHANDS + CLOCKHAND_SIZE, R0
-#           MOV  $CLOCKHAND_SIZE_WORDS, R2
-#           CLR  R5
-#           CALL MONO_TO_COLOR_LOOP
+           MOV  $CLOCKHAND_GFX_END, R1
+           MOV  $CLOCKHANDS + CLOCKHAND_SIZE, R0
+           MOV  $CLOCKHAND_SIZE_WORDS, R2
+           CLR  R5
+           CALL MONO_TO_COLOR_LOOP
 
-#           MOV $CLOCKHAND_SIZE_WORDS, R2
-#           MOV $CLOCKHAND_MIN, R3
-#           MOV $CLOCKHAND_HOUR, R4
-#           10$:
-#               MOV (R0), (R3)+
-#               MOV (R0)+, (R4)+
-#           SOB R2, 10$
+           MOV $CLOCKHAND_SIZE_WORDS, R2
+           MOV $CLOCKHAND_MIN, R3
+           MOV $CLOCKHAND_HOUR, R4
+           10$:
+               MOV (R0), (R3)+
+               MOV (R0)+, (R4)+
+           SOB R2, 10$
 
-#           MOV $2, R3
-#           MOV $3, R4
-#           MOV $0b1100000000001111, R5
-#           CALL CLOCKHAND_REDUCE
+           MOV $2, R3
+           MOV $3, R4
+           MOV $0b1100000000001111, R5
+           CALL CLOCKHAND_REDUCE
 
-#           INC R3
-#           INC R4
-#           MOV $0b1111000000111111, R5
+           INC R3
+           INC R4
+           MOV $0b1111000000111111, R5
 
-#   CLOCKHAND_REDUCE:
-#           MOV $020, R1
-#           SUB R3, R1
-#           SUB R4, R1
+   CLOCKHAND_REDUCE:
+           MOV $020, R1
+           SUB R3, R1
+           SUB R4, R1
 
-#           MOV $12, CLOCKHAND_COUNT
+           MOV $12, CLOCKHAND_COUNT
 
-#   NEXT_CLOCKHAND_PHASE:
-#           MOV R3, R2
-#           10$:
-#               CLR (R0)+
-#               CLR (R0)+
-#           SOB R2, 10$
+   NEXT_CLOCKHAND_PHASE:
+           MOV R3, R2
+           10$:
+               CLR (R0)+
+               CLR (R0)+
+           SOB R2, 10$
 
-#           MOV R1, R2
-#           1$:
-#               BICB R5, (R0)+
-#               INC R0
-#               INC R0
-#               SWAB R5
-#               BICB R5, (R0)+
-#               SWAB R5
-#           SOB R2, 1$
+           MOV R1, R2
+           1$:
+               BICB R5, (R0)+
+               INC R0
+               INC R0
+               SWAB R5
+               BICB R5, (R0)+
+               SWAB R5
+           SOB R2, 1$
 
-#           MOV R4, R2
-#           2$:
-#               CLR (R0)+
-#               CLR (R0)+
-#           SOB R2, 2$
+           MOV R4, R2
+           2$:
+               CLR (R0)+
+               CLR (R0)+
+           SOB R2, 2$
 
-#          .equiv CLOCKHAND_COUNT, .+2
-#           DEC $0
-#           BNE NEXT_CLOCKHAND_PHASE
-            RETURN
+          .equiv CLOCKHAND_COUNT, .+2
+           DEC $0
+           BNE NEXT_CLOCKHAND_PHASE
+           RETURN
 
 ## REMOVE_PROGRESS:
 ##            #MOV ACTUAL_PAGES, -(SP)
@@ -673,14 +702,6 @@ Bootstrap.DiskIO_Start:
        .ppudo_ensure $PPU.LoadDiskFile,$ParamsStruct
         RETURN
 # Bootstrap.DiskRead_Start #-------------------------------------------------}}}
-ParamsStruct:
-    PS.Status:          .byte -1  # operation status code
-    PS.Command:         .byte 010 # read data from disk
-    PS.DeviceType:      .byte 02       # double sided disk
-    PS.DeviceNumber:    .byte 0x00 | 0 # bit 7: head(0-bottom, 1-top) ∨ drive number 0(0-3)
-    PS.AddressOnDevice: .byte 0, 1     # track 0(0-79), sector 1(1-10)
-    PS.CPU_RAM_Address: .word 0
-    PS.WordsCount:      .word 0        # number of words to transfer
 Bootstrap.DiskIO_WaitForFinish: #--------------------------------------------{{{
         CLC
         MOVB @$PS.Status,R0
@@ -711,6 +732,15 @@ Bootstrap.DiskIO_WaitForFinish: #--------------------------------------------{{{
 1237$:  RETURN
 # Bootstrap.DiskIO_WaitForFinish #-------------------------------------------}}}
 # files related data --------------------------------------------------------{{{
+ParamsStruct:
+    PS.Status:          .byte -1  # operation status code
+    PS.Command:         .byte 010 # read data from disk
+    PS.DeviceType:      .byte 02       # double sided disk
+    PS.DeviceNumber:    .byte 0x00 | 0 # bit 7: head(0-bottom, 1-top) ∨ drive number 0(0-3)
+    PS.AddressOnDevice: .byte 0, 1     # track 0(0-79), sector 1(1-10)
+    PS.CPU_RAM_Address: .word 0
+    PS.WordsCount:      .word 0        # number of words to transfer
+
 # each record is 3 words:
 #   .word address for the data from a disk
 #   .word size in words
@@ -759,12 +789,12 @@ RED_timeCS:
         .equiv GREEN_timeCS, RED_timeCS + GFX_timeCS_SIZE
         .equiv BLUE_timeCS, GREEN_timeCS + GFX_timeCS_SIZE
 
-CLOCKHAND_GFX_START:
+CLOCKHAND_GFX:
         .incbin "build/clockhand.raw"
 CLOCKHAND_GFX_END:
 
         .equiv CLOCKHANDS, BLUE_timeCS + GFX_timeCS_SIZE
-        .equiv CLOCKHAND_SIZE, (CLOCKHAND_GFX_END - CLOCKHAND_GFX_START) * 2
+        .equiv CLOCKHAND_SIZE, CLOCKHAND_GFX_END - CLOCKHAND_GFX
         .equiv CLOCKHAND_SIZE_WORDS, CLOCKHAND_SIZE >> 1
 
         .equiv CLOCKHAND_SEC, CLOCKHANDS
@@ -799,9 +829,14 @@ title_palette: #----------------------------------------------------------------
     .word      1, setOffscreenColors
     .word         BLACK | BLUE  << 4 | BLACK << 8 | BLACK << 12
     .word         BLACK | BLACK << 4 | BLACK << 8 | BLACK << 12
-    .word      0, setCursorScalePalette, cursorGraphic, scale320 | RGb
-    .word      1, setColors; .byte Black, brRed, brGreen, White
+    .word      0, setCursorScalePalette, cursorGraphic, scale320 | RGB
+    .word      1, setColors; .byte Black, brRed, brGreen, brCyan
     .word untilEndOfScreen
 #-------------------------------------------------------------------------------
-GFX_W3: .skip 10870+128
+GFX_W3:
+    .skip 10870+128
+   # f7001.lzsa  7 880 -> 16384
+   # f7002.lzsa  2 894 ->  3862
+   # f7003.lzsa 10 870 -> 16384
+   # f7004.lzsa  7 642 -> 14928
 end:
