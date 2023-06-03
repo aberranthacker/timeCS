@@ -6,7 +6,7 @@
 #
 #   SPECIAL FOR AZBK BY MAXIM BAGAEV 
 #
-#   PLATFORM:   Electronika MS0511 + Aberrant Sound Module
+#   PLATFORM:   Elektronika MS 0511 + Aberrant Sound Module
 #   COMPILER:   GNU Assembler
 #
 #   BK-0011M version adapted for Electronika MS0511 by aberrant_hacker
@@ -52,19 +52,22 @@ MUS_ADDR_NEXT:
         BPL  MUS_PSG2_INDEX
 
         ADD  $021, R0
-        BNE  2$
+        BNZ  2$
 
-       #CMP  @$MUS_PAGES, $036000
-       #BEQ  1$
+        CMP  @$FILE_1_PARAMS + MUS_DATA_REG, $PBP2DT # finished playing from bank 2 ?
+        BEQ  1$ # yes, stop the music
+      # no, switch to bank 2
+        MOV  $PBP2DT, @$FILE_1_PARAMS + MUS_DATA_REG
+        MOV  $PBP2DT, @$FILE_2_PARAMS + MUS_DATA_REG
+        MOV  $0100000,@$FILE_1_PARAMS + MUS_DATA_ADDR
+        MOV  $0125034,@$FILE_2_PARAMS + MUS_DATA_ADDR
 
-       #MOV  $036000, @$MUS_PAGES
-       #MOV  @$MUS_PAGES, @$0177716
-       #MOV  $040000, @$FILE_1_PARAMS
-       #MOV  $065034, @$FILE_2_PARAMS
         CLR  MUS_STOP_NEED
         BR   MUS_LOOP
 
 1$:     CLR  @$PLAY_NOW
+        MOV  $CPU.Title.PLAY_NOW, @$PBPADR
+        CLR  @$PBP12D
         JMP  MUS_STOP
 
 2$:     BMI  MUS_PSG1
@@ -263,25 +266,25 @@ psgplayer.MUTE:
         MOV  $MUS_2_PARAMS, R5
         BR   MUS_STOP
 
-       # MUS_PARAMS
-        .equiv INI_INDEXMASK_SIZE, 64
-        .equiv INI_MUS_LOOP, 0
-        .equiv MAX_INNER_CALL, 7
-        .equiv MAX_INNER_CALL_SIZE, MAX_INNER_CALL * 8
-        .equiv MAX_INNER_CALL_SIZE_WORDS, MAX_INNER_CALL_SIZE >> 1
+      # MUS_PARAMS
+       .equiv INI_INDEXMASK_SIZE, 64
+       .equiv INI_MUS_LOOP, 0
+       .equiv MAX_INNER_CALL, 7
+       .equiv MAX_INNER_CALL_SIZE, MAX_INNER_CALL * 8
+       .equiv MAX_INNER_CALL_SIZE_WORDS, MAX_INNER_CALL_SIZE >> 1
 
-       # MUS_PARAMS_OFFSETS
-        .equiv MUS_DATA_REG,                                0
-        .equiv MUS_DATA_ADDR,        MUS_DATA_REG         + 2
-        .equiv MUS_LOOP_ADDR,        MUS_DATA_ADDR        + 2
-        .equiv CUR_MUS_ADDR,         MUS_LOOP_ADDR        + 2
-        .equiv MUS_STACK,            CUR_MUS_ADDR         + 2
-        .equiv BEGIN_MUS_STACK_ADDR, MUS_STACK            + MAX_INNER_CALL_SIZE
-        .equiv CUR_MUS_STACK_ADDR,   BEGIN_MUS_STACK_ADDR + 2
-        .equiv MUS_PAUSE,            CUR_MUS_STACK_ADDR   + 2
-        .equiv AY_PORT,              MUS_PAUSE            + 2
+      # MUS_PARAMS_OFFSETS
+       .equiv MUS_DATA_REG,                                0
+       .equiv MUS_DATA_ADDR,        MUS_DATA_REG         + 2
+       .equiv MUS_LOOP_ADDR,        MUS_DATA_ADDR        + 2
+       .equiv CUR_MUS_ADDR,         MUS_LOOP_ADDR        + 2
+       .equiv MUS_STACK,            CUR_MUS_ADDR         + 2
+       .equiv BEGIN_MUS_STACK_ADDR, MUS_STACK            + MAX_INNER_CALL_SIZE
+       .equiv CUR_MUS_STACK_ADDR,   BEGIN_MUS_STACK_ADDR + 2
+       .equiv MUS_PAUSE,            CUR_MUS_STACK_ADDR   + 2
+       .equiv AY_PORT,              MUS_PAUSE            + 2
 
-        .equiv SIZE_OF_MUS_PARAMS, AY_PORT - MUS_DATA_REG
+       .equiv SIZE_OF_MUS_PARAMS, AY_PORT - MUS_DATA_REG
 
 #PSG_1_PARAMS:
     AY_1_PARAMS:    .word 0b0100111100000000
@@ -294,7 +297,7 @@ psgplayer.MUTE:
 #PSG_2_PARAMS:
     AY_2_PARAMS:    .word 0b1000111100000000
                     .word 1
-    FILE_2_PARAMS:  .word PBP2DT
-                    .word 0100000
+    FILE_2_PARAMS:  .word PBP1DT
+                    .word 0136120
     MUS_2_PARAMS:   .space SIZE_OF_MUS_PARAMS
     psgplayer.PSG1: .word PSG1
