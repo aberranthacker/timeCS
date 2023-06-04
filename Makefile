@@ -177,7 +177,7 @@ build/timecs_S.raw : $(BMP_TO_RAW) gfx/timecs_S.bmp
 	$(BMP_TO_RAW) -b 1 gfx/timecs_S.bmp build/timecs_S.raw
 
 build/clockhand.raw : $(BMP_TO_RAW) gfx/clockhand.bmp
-	$(BMP_TO_RAW) gfx/clockhand.bmp build/clockhand.raw
+	$(BMP_TO_RAW) -b 1 gfx/clockhand.bmp build/clockhand.raw
 
 build/mainscr.raw.lzsa : build/mainscr.raw
 	$(LZSA3) build/mainscr.raw build/mainscr.raw.lzsa

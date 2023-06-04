@@ -62,7 +62,7 @@ start:
         CALL LZSA_UNPACK
        #CALL REMOVE_PROGRESS
 
-       #CALL CLOCKHANDS_GFX_PREP
+        CALL CLOCKHANDS_GFX_PREP
        #CALL REMOVE_PROGRESS
 
         CALL GFX_timeCS_PREP
@@ -139,7 +139,7 @@ MAIN_LOOP:
     2$: MOV  $0, R0
         ADD  $020, R0
        .equiv DOTS_SIZE, DOTS_END - DOTS
-        CMP  R0, $DOTS_SIZE # at the end of DOTS?
+        CMP  R0, $DOTS_SIZE # at the end of the DOTS?
         BLO  3$             # no, continue
         CLR  R0             # yes, reset the offset
 
@@ -177,7 +177,7 @@ TUNNEL:
 TUNNEL_END:
         .word 0 # end of data marker
 
-DRAW_CIRCLE_OPER:
+DRAW_CIRCLE_OPER: #----------------------------------------------------------{{{
            #MOVB $014, @$0177663
             PUSH R4
             PUSH R5
@@ -291,7 +291,7 @@ DOTS:
        .word 0b0010000000100000
        .word 0b0100000001000000
        .word 0b1000000010000000
-DOTS_END:
+DOTS_END: #------------------------------------------------------------------}}}
 
 MOSAIC: #--------------------------------------------------------------------{{{
         MOV  $FB0-8,R5
@@ -426,9 +426,9 @@ DISPLAY_CLOCK: #-------------------------------------------------------------{{{
 
         MOV  $CLOCKHANDS_DATA, R5
     10$:MOV  (R5)+, R1
-        BEQ  3$
+        BZE  3$
 
-    1$: ADD  $LINE_WIDTHB, R1
+    1$: ADD  $64, R1
         CMP  R1, (R5)+
         BLO  2$
 
@@ -472,9 +472,9 @@ DISPLAY_CLOCK: #-------------------------------------------------------------{{{
 1237$:  RETURN
 
 CLOCKHANDS_DATA:
-       .word CLOCKHAND_SEC + 0500, CLOCKHAND_SEC + CLOCKHAND_SIZE, CLOCKHAND_SEC
-       .word CLOCKHAND_MIN + 01400 - 0500, CLOCKHAND_MIN + CLOCKHAND_SIZE, CLOCKHAND_MIN
-       .word CLOCKHAND_HOUR, CLOCKHAND_HOUR + CLOCKHAND_SIZE, CLOCKHAND_HOUR
+       .word CLOCKHAND_SEC + 0500,         CLOCKHAND_SEC  + CLOCKHAND_SIZE, CLOCKHAND_SEC
+       .word CLOCKHAND_MIN + 01400 - 0500, CLOCKHAND_MIN  + CLOCKHAND_SIZE, CLOCKHAND_MIN
+       .word CLOCKHAND_HOUR,               CLOCKHAND_HOUR + CLOCKHAND_SIZE, CLOCKHAND_HOUR
        .word 0
 # DISPLAY_CLOCK -------------------------------------------------------------}}}
 
@@ -577,8 +577,8 @@ PALETTES_FOR_CHANGE:
     .even
 # TIKTAK --------------------------------------------------------------------}}}
 
-# Creates three sets of 2-bit sprites a set of 1-bit sprites
-GFX_timeCS_PREP:
+# Creates three sets of 2-bit sprites from a set of 1-bit sprites
+GFX_timeCS_PREP: #-----------------------------------------------------------{{{
         MOV $RED_timeCS, R3
         MOV $GREEN_timeCS, R4
         MOV $BLUE_timeCS, R5
@@ -594,66 +594,67 @@ GFX_timeCS_PREP:
            MOV  R0,(R3)+ # color number 3
         SOB  R1,100$
 
-        RETURN
+        RETURN #-------------------------------------------------------------}}}
 
-CLOCKHANDS_GFX_PREP:
-           MOV  $CLOCKHAND_GFX_END, R1
-           MOV  $CLOCKHANDS + CLOCKHAND_SIZE, R0
-           MOV  $CLOCKHAND_SIZE_WORDS, R2
-           CLR  R5
-           CALL MONO_TO_COLOR_LOOP
+CLOCKHANDS_GFX_PREP: #-------------------------------------------------------{{{
+        MOV  $CLOCKHAND_GFX_END, R1
+        MOV  $CLOCKHANDS + CLOCKHAND_SIZE, R0
+        MOV  $CLOCKHAND_SIZE_WORDS, R2
+        1$:
+            MOVB -(R1),R3
+            MOVB R3,-(R0)
+            MOVB R3,-(R0)
+        SOB  R2, 1$
 
-           MOV $CLOCKHAND_SIZE_WORDS, R2
-           MOV $CLOCKHAND_MIN, R3
-           MOV $CLOCKHAND_HOUR, R4
-           10$:
-               MOV (R0), (R3)+
-               MOV (R0)+, (R4)+
-           SOB R2, 10$
+        MOV $CLOCKHAND_SIZE_WORDS, R2
+        MOV $CLOCKHAND_MIN, R3
+        MOV $CLOCKHAND_HOUR, R4
+        10$:
+            MOV (R0), (R3)+
+            MOV (R0)+, (R4)+
+        SOB R2, 10$
 
-           MOV $2, R3
-           MOV $3, R4
-           MOV $0b1100000000001111, R5
-           CALL CLOCKHAND_REDUCE
+        MOV  $0x0303, R4 # 0b0000_0011_0000_0011
+        MOV  $0x8080, R5 # 0b1000_0000_1000_0000
+        CALL CLOCKHAND_REDUCE
 
-           INC R3
-           INC R4
-           MOV $0b1111000000111111, R5
+        INC  @$count_a
+        INC  @$count_b
+
+        MOV  $0x0707, R4 # 0b0000_0111_0000_0111
+        MOV  $0xC0C0, R5 # 0b1100_0000_1100_0000
 
    CLOCKHAND_REDUCE:
-           MOV $020, R1
-           SUB R3, R1
-           SUB R4, R1
+        MOV $16, R1
+        SUB @$count_a, R1
+        SUB @$count_b, R1
 
-           MOV $12, CLOCKHAND_COUNT
+        MOV $12, R3 # CLOCKHAND_COUNT
 
    NEXT_CLOCKHAND_PHASE:
-           MOV R3, R2
-           10$:
-               CLR (R0)+
-               CLR (R0)+
-           SOB R2, 10$
+       .equiv count_a, .+2
+        MOV $2, R2
+        10$:
+            CLR (R0)+
+            CLR (R0)+
+        SOB R2, 10$
 
-           MOV R1, R2
-           1$:
-               BICB R5, (R0)+
-               INC R0
-               INC R0
-               SWAB R5
-               BICB R5, (R0)+
-               SWAB R5
-           SOB R2, 1$
+        MOV R1, R2
+        1$:
+            BIC  R4, (R0)+
+            BIC  R5, (R0)+
+        SOB R2, 1$
 
-           MOV R4, R2
-           2$:
-               CLR (R0)+
-               CLR (R0)+
-           SOB R2, 2$
+       .equiv count_b, .+2
+        MOV $3, R2
+        2$:
+            CLR (R0)+
+            CLR (R0)+
+        SOB R2, 2$
 
-          .equiv CLOCKHAND_COUNT, .+2
-           DEC $0
-           BNE NEXT_CLOCKHAND_PHASE
-           RETURN
+        DEC  R3 # CLOCKHAND_COUNT
+        BNE  NEXT_CLOCKHAND_PHASE
+        RETURN #-------------------------------------------------------------}}}
 
 ## REMOVE_PROGRESS:
 ##            #MOV ACTUAL_PAGES, -(SP)
@@ -794,11 +795,11 @@ CLOCKHAND_GFX:
 CLOCKHAND_GFX_END:
 
         .equiv CLOCKHANDS, BLUE_timeCS + GFX_timeCS_SIZE
-        .equiv CLOCKHAND_SIZE, CLOCKHAND_GFX_END - CLOCKHAND_GFX
+        .equiv CLOCKHAND_SIZE, (CLOCKHAND_GFX_END - CLOCKHAND_GFX) * 2
         .equiv CLOCKHAND_SIZE_WORDS, CLOCKHAND_SIZE >> 1
 
-        .equiv CLOCKHAND_SEC, CLOCKHANDS
-        .equiv CLOCKHAND_MIN, CLOCKHAND_SEC + CLOCKHAND_SIZE
+        .equiv CLOCKHAND_SEC,  CLOCKHANDS
+        .equiv CLOCKHAND_MIN,  CLOCKHAND_SEC + CLOCKHAND_SIZE
         .equiv CLOCKHAND_HOUR, CLOCKHAND_MIN + CLOCKHAND_SIZE
 
         .equiv CLOCKHAND_BUFFER, CLOCKHAND_HOUR + CLOCKHAND_SIZE
@@ -834,7 +835,9 @@ title_palette: #----------------------------------------------------------------
     .word untilEndOfScreen
 #-------------------------------------------------------------------------------
 GFX_W3:
+        .ifdef DEBUG
     .skip 10870+128
+        .endif
    # f7001.lzsa  7 880 -> 16384
    # f7002.lzsa  2 894 ->  3862
    # f7003.lzsa 10 870 -> 16384
