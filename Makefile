@@ -120,6 +120,7 @@ build/player.bin : build/player.o
 build/player.o : $(COMMON) \
                player.s \
                unlzsa3.s \
+               unlzsa3_to_bp.s \
                build/loading.raw \
                build/error.raw \
                build/mainscr.raw.lzsa \
