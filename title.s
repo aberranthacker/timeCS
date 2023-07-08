@@ -26,15 +26,10 @@
            .=TITLE_START
 start:
 # INIT ----------------------------------------------------------------------{{{
-        MOV  $(FB_SIZE_WORDS + 4) >> 2,R1
-        MOV  $FB0-8,R5
-        100$:
-           .rept 4
-            CLR  (R5)+
-           .endr
-        SOB  R1,100$
-
+        MOV  $INITIAL_SP, SP
         MTPS $PR0
+
+        CALL PROGRESS_BAR_DISPLAY
 
         MOV  $f7001.lzsa,R0
         MOV  $0100000,@$CBPADR
@@ -52,24 +47,30 @@ start:
         CALL LoadPSGP
 
         MOV  $w3.raw.lzsa,R0
-        CALL Bootstrap.DiskRead_Start
-        CALL Bootstrap.DiskIO_WaitForFinish
+        CALL DiskRead_Start
+        CALL DiskIO_WaitForFinish
+        CALL PROGRESS_BAR_DISPLAY
 
-       .ppudo $PPU.SetPalette, $title_palette
-
-        MOV $GFX_W3, R1
-        MOV $FB1, R2
+        MOV  $GFX_W3, R1
+        MOV  $FB1, R2
         CALL LZSA_UNPACK
-       #CALL REMOVE_PROGRESS
+        CALL PROGRESS_BAR_DISPLAY
 
         CALL CLOCKHANDS_GFX_PREP
-       #CALL REMOVE_PROGRESS
 
         CALL GFX_timeCS_PREP
-       #CALL REMOVE_PROGRESS
 
-        MOV $TIKTAK, @$0100
-       #CALL REMOVE_PROGRESS
+        MOV  $TIKTAK, @$0100
+        CALL PROGRESS_BAR_DISPLAY
+
+        MOV  $(FB_SIZE_WORDS + 4) >> 2,R1
+        MOV  $FB0-8,R5
+        100$:
+           .rept 4
+            CLR  (R5)+
+           .endr
+        SOB  R1,100$
+       .ppudo $PPU.SetPalette, $title_palette
 
         CALL MOSAIC
 
@@ -178,17 +179,23 @@ TUNNEL_END:
         .word 0 # end of data marker
 
 DRAW_CIRCLE_OPER: #----------------------------------------------------------{{{
-           #MOVB $014, @$0177663
+            MOV  $PPU.SET_FB0_VISIBLE,@$CCH1OD
             PUSH R4
             PUSH R5
             CALL DRAW_CIRCLE
             POP  R5
             POP  R4
-           #MOVB @BK11_PALETTE_IDX, R0
-           #BEQ 10$
 
-           #MOVB R0, @$0177663
-        10$:RETURN
+            CLR  R0
+            BISB @BK11_PALETTE_IDX, R0
+            BZE  1237$
+
+            ASLB R0
+            BCC  1237$
+
+            MOV  $PPU.SET_FB1_VISIBLE,@$CCH1OD
+1237$:
+            RETURN
 
 DRAW_CIRCLE:
             CLR  R0
@@ -548,15 +555,17 @@ TIKTAK: #--------------------------------------------------------------------{{{
 
         ADD  $96-18, PALETTE_CHANGE_NEXT_FRAME_NUMBER
        .equiv BK11_PALETTE_IDX, .+2
-        MOV  $PALETTES_FOR_CHANGE, R0
-    1$: MOVB (R0)+, R1
+        MOV  $PALETTES_FOR_CHANGE, R1
+    1$: CLR  R0
+        BISB (R1)+, R0
         BNZ  2$
 
-        MOV  $PALETTES_FOR_CHANGE, R0
+        MOV  $PALETTES_FOR_CHANGE, R1
         BR   1$
 
-    2$: MOV  R0, BK11_PALETTE_IDX
-       #MOVB R1, @$0177663
+    2$: MOV  R1, BK11_PALETTE_IDX
+        
+        CALL SetBKPaletteFromR0
 
     TIKTAK_EXIT:
         MOV  (SP)+, R5
@@ -568,6 +577,21 @@ TIKTAK: #--------------------------------------------------------------------{{{
 
         RTI
 
+SetBKPaletteFromR0:
+        ASLB R0
+        BCS  SwithToFB1
+
+        MOV  $PPU.SET_FB0_VISIBLE,@$CCH1OD
+        BR   1237$
+
+    SwithToFB1:
+        MOV  $PPU.SET_FB1_VISIBLE,@$CCH1OD
+        MOV  palettes_table(R0),@$PPUCommandArg
+       .ppudo $PPU.SetPaletteFB1
+       #MOVB R0, @$0177663
+1237$:
+        RETURN
+
 PALETTES_FOR_CHANGE:
     .byte  014,  014,  014, 0215,  014,  014, 0216, 014
     .byte 0203,  014, 0201,  014 , 014,  014, 0202, 014
@@ -576,6 +600,53 @@ PALETTES_FOR_CHANGE:
     .byte  014, 0205, 0205,    0
     .even
 # TIKTAK --------------------------------------------------------------------}}}
+palettes_table:
+    .word palette_014 # palette_00
+    .word palette_01
+    .word palette_02
+    .word palette_03
+    .word palette_04
+    .word palette_05
+    .word palette_06
+    .word palette_07
+    .word palette_014 # palette_010
+    .word palette_014 # palette_011
+    .word palette_014 # palette_012
+    .word palette_014 # palette_013
+    .word palette_014
+    .word palette_015
+    .word palette_016
+
+palette_01:
+    .word      1, setColors; .byte Black, brBlue, brGreen, brRed
+    .word untilEndOfScreen
+palette_02:
+    .word      1, setColors; .byte Black, brCyan, brBlue, brMagenta
+    .word untilEndOfScreen
+palette_03:
+    .word      1, setColors; .byte Black, brGreen, brCyan, brYellow
+    .word untilEndOfScreen
+palette_04:
+    .word      1, setColors; .byte Black, brMagenta, brCyan, White
+    .word untilEndOfScreen
+palette_05:
+    .word      1, setColors; .byte Black, White, White, White
+    .word untilEndOfScreen
+palette_06:
+    .word      1, setColors; .byte Black, brRed, brRed, brRed
+    .word untilEndOfScreen
+palette_07:
+    .word      1, setColors; .byte Black, brGreen, brGreen, brGreen
+    .word untilEndOfScreen
+palette_014:
+    .word      1, setColors; .byte Black, brRed, brGreen, brCyan
+    .word untilEndOfScreen
+palette_015:
+    .word      1, setColors; .byte Black, brCyan, brYellow, White
+    .word untilEndOfScreen
+palette_016:
+    .word      1, setColors; .byte Black, brYellow, brGreen, White
+    .word untilEndOfScreen
 
 # Creates three sets of 2-bit sprites from a set of 1-bit sprites
 GFX_timeCS_PREP: #-----------------------------------------------------------{{{
@@ -656,6 +727,69 @@ CLOCKHANDS_GFX_PREP: #-------------------------------------------------------{{{
         BNE  NEXT_CLOCKHAND_PHASE
         RETURN #-------------------------------------------------------------}}}
 
+PROGRESS_BAR_DISPLAY:
+        PUSH R0
+        PUSH R1
+        PUSH R2
+        PUSH R3
+        PUSH R4
+        PUSH R5
+
+# | 3 | x | 36408 | 36408 |
+# | 3 | 4 | 36408 |  7280 |
+       #MOV  $progress_bar_arg, R4
+       #ADD  (R4)+, (R4)
+       #MOV  (R4)+, R1
+       #ADD  (R4)+, (R4)
+       #ADC  R1
+       #MOV  R1, -4(R4)
+
+        MOV  @$pb_arg0, R1
+        MUL  $2,R1
+        INC  @$pb_arg0
+
+       .set X_OFFSET, 64 >> 2
+       .set Y_OFFSET, 160 * LINE_WIDTHB
+        MOV  $FB0 + X_OFFSET + Y_OFFSET, R0
+        MOV  $4, R2 # height of progress bar elements
+
+        0$: # lines loop
+            PUSH R0
+            MOV  R1, R3 # R1 - number of elements to draw
+            CLR  R5
+            1$: 
+               #TST  R5
+                BPL  2$
+                BIS  $0x0070,(R0)+
+                COM  R5
+            SOB  R3, 1$
+            BR  3$
+            2$:
+                BIS  $0x0007,(R0)
+                COM  R5
+            SOB  R3, 1$
+
+        3$:
+            POP  R0
+            ADD  $LINE_WIDTHB, R0
+        SOB  R2, 0$
+
+        POP  R5
+        POP  R4
+        POP  R3
+        POP  R2
+        POP  R1
+        POP  R0
+
+        RETURN
+
+progress_bar_arg:
+        pb_arg0: .word 1
+        pb_arg1: .word 0
+        pb_arg2: .word 0
+        pb_arg3: .word 0
+
+
 ## REMOVE_PROGRESS:
 ##            #MOV ACTUAL_PAGES, -(SP)
 ##             TRAP 0; .word 017400
@@ -676,10 +810,10 @@ CLOCKHANDS_GFX_PREP: #-------------------------------------------------------{{{
 ##             RETURN
 ##
 
-Bootstrap.DiskRead_Start: #--------------------------------------------------{{{
+DiskRead_Start: #--------------------------------------------------{{{
         MOVB $010,@$PS.Command # read from disk
 
-Bootstrap.DiskIO_Start:
+DiskIO_Start:
         MOV  (R0)+,@$PS.CPU_RAM_Address
         MOV  (R0)+,@$PS.WordsCount
         MOV  (R0),R0 # starting block number
@@ -702,11 +836,11 @@ Bootstrap.DiskIO_Start:
 
        .ppudo_ensure $PPU.LoadDiskFile,$ParamsStruct
         RETURN
-# Bootstrap.DiskRead_Start #-------------------------------------------------}}}
-Bootstrap.DiskIO_WaitForFinish: #--------------------------------------------{{{
+# DiskRead_Start #-------------------------------------------------}}}
+DiskIO_WaitForFinish: #--------------------------------------------{{{
         CLC
         MOVB @$PS.Status,R0
-        BMI  Bootstrap.DiskIO_WaitForFinish
+        BMI  DiskIO_WaitForFinish
         BZE  1237$
       # +------------------------------------------------------+
       # | Код ответа |  Значение                               |
@@ -731,8 +865,7 @@ Bootstrap.DiskIO_WaitForFinish: #--------------------------------------------{{{
         SEC  # set carry flag to indicate that there was an error
 
 1237$:  RETURN
-# Bootstrap.DiskIO_WaitForFinish #-------------------------------------------}}}
-# files related data --------------------------------------------------------{{{
+# DiskIO_WaitForFinish #-------------------------------------------}}}
 ParamsStruct:
     PS.Status:          .byte -1  # operation status code
     PS.Command:         .byte 010 # read data from disk
@@ -741,7 +874,7 @@ ParamsStruct:
     PS.AddressOnDevice: .byte 0, 1     # track 0(0-79), sector 1(1-10)
     PS.CPU_RAM_Address: .word 0
     PS.WordsCount:      .word 0        # number of words to transfer
-
+# files related data --------------------------------------------------------{{{
 # each record is 3 words:
 #   .word address for the data from a disk
 #   .word size in words
@@ -767,7 +900,11 @@ w3.raw.lzsa:
     .word 0
     .word 0
 #----------------------------------------------------------------------------}}}
-
+title_palette: #----------------------------------------------------------------
+    .word      0, setCursorScalePalette, cursorGraphic, scale320 | RGB
+    .word      1, setColors; .byte Black, brRed, brGreen, White
+    .word untilEndOfScreen
+#-------------------------------------------------------------------------------
 GFX_timeCS_MASK:
         .incbin "build/timecs_t_mask.raw"
         .incbin "build/timecs_i_mask.raw"
@@ -805,11 +942,13 @@ CLOCKHAND_GFX_END:
         .equiv CLOCKHAND_BUFFER, CLOCKHAND_HOUR + CLOCKHAND_SIZE
 
 LoadPSGP:
-        CALL Bootstrap.DiskRead_Start
-        CALL Bootstrap.DiskIO_WaitForFinish
+        CALL DiskRead_Start
+        CALL DiskIO_WaitForFinish
+        CALL PROGRESS_BAR_DISPLAY
         MOV  $GFX_W3,R1
         MOV  $FB1,R2
         CALL LZSA_UNPACK
+        CALL PROGRESS_BAR_DISPLAY
         MOV  $CBPADR,R5
        .equiv LoadPSGP.DataReg, .+2
         MOV  $CBP1DT,R4
@@ -822,18 +961,11 @@ LoadPSGP:
             MOVB (R3)+,(R4)
             INC  (R5)
         SOB  R2,100$
+        CALL PROGRESS_BAR_DISPLAY
         RETURN
 
 LZSA_UNPACK: .include "unlzsa3.s"
 
-title_palette: #----------------------------------------------------------------
-    .word      1, setOffscreenColors
-    .word         BLACK | BLUE  << 4 | BLACK << 8 | BLACK << 12
-    .word         BLACK | BLACK << 4 | BLACK << 8 | BLACK << 12
-    .word      0, setCursorScalePalette, cursorGraphic, scale320 | RGB
-    .word      1, setColors; .byte Black, brRed, brGreen, brCyan
-    .word untilEndOfScreen
-#-------------------------------------------------------------------------------
 GFX_W3:
         .ifdef DEBUG
     .skip 10870+128

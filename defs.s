@@ -7,10 +7,14 @@
 
 .equiv PPU.LoadDiskFile,       0
 .equiv PPU.SetPalette,         2
-.equiv PPU.PSGP_Player.Init,   4
-.equiv PPU.PSGP_Player.Play,   6
+.equiv PPU.SetPaletteFB1,      4
+.equiv PPU.PSGP_Player.Init,   6
+.equiv PPU.PSGP_Player.Play,   8
+.equiv PPU.PT3Play.Init,      10
+.equiv PPU.PT3Play.Play,      12
+.equiv PPU.PT3Play.Mute,      14
 
-.equiv PPU.LastJMPTableIndex, 6
+.equiv PPU.LastJMPTableIndex, 14
 
 .equiv PPU.SET_FB0_VISIBLE, 0
 .equiv PPU.SET_FB1_VISIBLE, 1
@@ -24,16 +28,33 @@
 # CPU memory map ---------------------------------------------------------------
 .equiv DUMMY_INTERRUPT_HANDLER, 040 # 32 0x20 loads from bootsector
 .equiv PPUCommandArg, 046 # 38 0x26 command for PPU argument
+
+.equiv CPT3.FRAME_NUMBER,         050 # Incremented by one each time the PLAY entry point is accessed
+.equiv CPT3.PT3FILE_MODULE1_ADDR, 052 # PT3 file address
+.equiv CPT3.PT3FILE_END_ADDR,     054 # Address of end PT3 file
+.equiv CPT3.END_OF_PT3FILE,       056 # CODA. End of PT3 file reached (incremented by one each time)
+.equiv CPT3.NO_REPEAT_MODE,       060 # Play without repeat. Set (not zero) before INIT call.
+.equiv CPT3.REPETITION_NUMBER,    062 # Number of elapsed repetitions after end of PT3 file
+
+.equiv PPT3.FRAME_NUMBER, CPT3.FRAME_NUMBER >> 1
+.equiv PPT3.PT3FILE_MODULE1_ADDR, CPT3.PT3FILE_MODULE1_ADDR >> 1
+.equiv PPT3.PT3FILE_END_ADDR, CPT3.PT3FILE_END_ADDR >> 1
+.equiv PPT3.END_OF_PT3FILE, CPT3.END_OF_PT3FILE >> 1
+.equiv PPT3.NO_REPEAT_MODE, CPT3.NO_REPEAT_MODE >> 1
+.equiv PPT3.REPETITION_NUMBER, CPT3.REPETITION_NUMBER >> 1
+
 .equiv FB_SIZE, MAIN_SCREEN_LINES_COUNT * LINE_WIDTHB
 .equiv FB_SIZE_WORDS, FB_SIZE >> 1
 .equiv FB0, 0600 + 8 # 0384 0x0180
 .equiv FB1_OFFSET, FB_SIZE + 8
 .equiv FB1, FB0 + FB1_OFFSET
-.equiv DEFAULT_FB, FB0 - 8
+.equiv DEFAULT_FB, FB1 - 8
 
+.equiv INITIAL_SP, 0160000
 .equiv LOADER_START, FB1 + (288 * 164) >> 2 # 044610 18824 0x4988
 .equiv PLAYER_START, FB1 + FB_SIZE
-.equiv TITLE_START, FB1 + FB_SIZE
+.equiv TITLE_START,  FB1 + FB_SIZE
+.equiv SONG_PACK_START, 0100000
 # 0160000 57344 0xE000 end of RAM ----------------------------------------------
 #-------------------------------------------------------------------------------
 .equiv PPU_UserRamSize,  0054104 # 22596 0x5844

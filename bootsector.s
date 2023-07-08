@@ -41,24 +41,22 @@
             TST  @$PPUCommandArg
         BNZ  WaitForPPUInit
       #-------------------------------------------------------------------------
-       #MOV  $loader.bin,R0
-       #CALL LoadDiskFile.Start
-       #CALL LoadDiskFile.WaitForFinish
-      #-------------------------------------------------------------------------
-       #JMP  @$LOADER_START
-      #-------------------------------------------------------------------------
-       #MOV  $player.bin,R0
-       #CALL LoadDiskFile.Start
-       #CALL LoadDiskFile.WaitForFinish
-      #-------------------------------------------------------------------------
-       #JMP  @$PLAYER_START
-      #-------------------------------------------------------------------------
-        MOV  $title.bin,R0
+        MOV  $loader.bin,R0
         CALL LoadDiskFile.Start
         CALL LoadDiskFile.WaitForFinish
       #-------------------------------------------------------------------------
+       #JMP  @$LOADER_START
+        CALL @$LOADER_START
+      #-------------------------------------------------------------------------
+        MOV  $player.bin,R0
+        CALL LoadDiskFile.Start
+        CALL LoadDiskFile.WaitForFinish
         JMP  @$PLAYER_START
-
+      #-------------------------------------------------------------------------
+       #MOV  $title.bin,R0
+       #CALL LoadDiskFile.Start
+       #CALL LoadDiskFile.WaitForFinish
+       #JMP  @$TITLE_START
 
 LoadDiskFile.Start: # ----------------------------------------------------------
         MOV  (R0)+,@$PS.CPU_RAM_Address
@@ -157,12 +155,15 @@ loader.bin:
     .word LOADER_START
     .word 0
     .word 0
+#title.bin:
+#    .word TITLE_START
+#    .word 0
+#    .word 0
 player.bin:
     .word PLAYER_START
     .word 0
     .word 0
-title.bin:
-    .word PLAYER_START
-    .word 0
-    .word 0
 #-------------------------------------------------------------------------------
+        .ifdef DEBUG
+    .=0600
+        .endif

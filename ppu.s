@@ -203,13 +203,14 @@ SLTABInit:
         MOV  R2,(R0)+        #--address of a screenline
         ADD  $8,R1           #  calc address of next record of SLTAB
         BIS  $0b110,R1       #  next record is 4-word, color settings
+        MOV  R0,@$MainScreenFirstRecAddr
         MOV  R1,(R0)+        #--pointer to record 64
 
-        MOV  R0,@$FirstMainScreenLinePointer
-        ADD  $4,@$FirstMainScreenLinePointer
+        MOV  R0,@$FB0_FirstRecAddr
 #----------------------------- main screen area
-        MOV  $DEFAULT_FB >> 1,R2    # address of second frame-buffer
+        MOV  $(FB0 - 8) >> 1,R2    # address of second frame-buffer
         MOV  $MAIN_SCREEN_LINES_COUNT,R3 # number of lines on main screen area
+
         3$:                  #
            .ifdef DEBUG
             MOV  $0x3300,(R0)+ #  colors  011  010  001  000 (YRGB)
@@ -219,17 +220,18 @@ SLTABInit:
             MOV  $0x0000,(R0)+ #  colors  111  110  101  100 (YRGB)
            .endif
             MOV  R2,(R0)+      #--main RAM address of a scanline
-            ADD  $8,R1         #  calc address of next record of SLTAB
-            MOV  R1,(R0)+      #--pointer to the next record of SLTAB
            #ADD  $40,R2        #  calculate address of next screenline
             ADD  $36,R2        #  calculate address of next screenline
+            ADD  $8,R1         #  calc address of next record of SLTAB
+            MOV  R1,(R0)+      #--pointer to the next record of SLTAB
         SOB  R3,3$             #
+        MOV  R1,BottomAreaFirstRec
 #------------------------------------- bottom region, footer
         MOV  R0,@$BottomAreaColors # store the address for future use
         MOV  $0xBA90,(R0)+   # colors  011  010  001  000 (YRGB)
         MOV  $0xFEDC,(R0)+   # colors  111  110  101  100 (YRGB)
        .equiv BOTTOM_AREA_OFFSET, (AUX_SCREEN_LINES_COUNT >> 1) * 40 + 40
-        MOV  $AUX_SCREEN_ADDR+BOTTOM_AREA_OFFSET, R2  #
+        MOV  $AUX_SCREEN_ADDR + BOTTOM_AREA_OFFSET, R2  #
         MOV  R2,(R0)+        #
         ADD  $40,R2          # calculate address of next screenline
         ADD  $8,R1           # calculate pointer to next record
@@ -245,7 +247,29 @@ SLTABInit:
         SOB  R3,4$           #
                              #
         CLR  (R0)+           #--address of line 308
-        MOV  R1,(R0)         #--pointer back to record 308
+        MOV  R1,(R0)+        #--pointer back to record 308
+
+        ADD  $0b111,R0      #  correct R0
+        BIC  $0b111,R0      #  due to alignment
+        MOV  R0, @$FB1_FirstRecAddr
+        MOV  R0, R1
+        BIS  $0b110,R1
+        MOV  $(FB1 - 8) >> 1,R2    # address of second frame-buffer
+
+        MOV  $MAIN_SCREEN_LINES_COUNT,R3 # number of lines on main screen area
+        5$:
+            MOV  $0x3300,(R0)+
+            MOV  $0xFFDD,(R0)+
+
+            MOV  R2,(R0)+
+            ADD  $36,R2
+
+            ADD  $8,R1
+            MOV  R1,(R0)+
+        SOB  R3,5$
+
+       .equiv BottomAreaFirstRec, .+2
+        MOV  $0,-(R0)
 #----------------------------------------------------------------------------}}}
         MOV  $0x001,@$PASWCR
 #-------------------------------------------------------------------------------
@@ -315,8 +339,12 @@ Queue_Loop:
 CommandVectors:
        .word LoadDiskFile
        .word SetPalette            # PPU.SetPalette
+       .word SetPaletteFB1         # PPU.SetPalette
        .word psgplayer.MUS_INIT
        .word psgplayer.Play
+       .word pt3play.Init
+       .word pt3play.Play
+       .word pt3play.Mute
 #-------------------------------------------------------------------------------
 SetPalette: #----------------------------------------------------------------{{{
         PUSH @$PASWCR
@@ -420,6 +448,94 @@ SetPalette_Finalize:
 
         RETURN
 #----------------------------------------------------------------------------}}}
+SetPaletteFB1: #-------------------------------------------------------------{{{
+        PUSH @$PASWCR
+        MOV  $0x0F0,@$PASWCR
+        MOV  $PBPADR,R4
+
+        CLC
+        ROR  R0
+        MOV  R0,(R4) # palette address
+      # R0 - first parameter word
+      # R1 - second parameter word
+      # R2 - display/color parameters flag
+      # R3 - current line
+      # R4 - next line where parameters change
+      # R5 - pointer to a word that we'll modify
+    .ifdef WORD_LINE_NUMBERS
+        MOV  @$PBP12D,@$SetPaletteFB1_NextLineNum  # get line number
+    .else
+        MOVB @$PBP1DT,@$SetPaletteFB1_NextLineNum  # get line number
+    .endif
+        PUSH (R4)
+SetPaletteFB1_NextRecord:
+        MOV  @$SetPaletteFB1_NextLineNum,R3 # R3 = previous iteration's next line
+        MOV  R3,R5            # prepare to calculate address of SLTAB section to modify
+        DEC  R5
+        ASH  $3,R5            # calculate offset by multiplying by 8 (by shifting R5 left by 3 bits)
+        ADD  @$FB1_FirstRecAddr,R5 # and add address of SLTAB section we modify
+        SUB  $2,R5
+
+        POP  (R4)
+    .ifdef WORD_LINE_NUMBERS
+        INC  (R4)
+        MOV  @$PBP12D,R2         # get display/color parameters flag
+    .else
+        MOVB @$PBP2DT,R2         # get display/color parameters flag
+    .endif
+        BMI  SetPaletteFB1_Finalize # negative value - terminator
+
+        INC  (R4)
+        MOV  @$PBP12D,R0     # get first data word
+        INC  (R4)
+        MOV  @$PBP12D,R1     # get second data word
+        INC  (R4)
+    .ifdef WORD_LINE_NUMBERS
+        MOV  @$PBP12D,@$SetPaletteFB1_NextLineNum # get next line idx
+    .else
+        MOVB @$PBP1DT,@$SetPaletteFB1_NextLineNum # get next line idx
+    .endif
+
+        PUSH (R4)
+
+    SetPaletteFB1_set_params$:
+        TSTB R2
+        BNZ  SetPaletteFB1_SetColorRegisters # 1 - set colors
+
+SetPaletteFB1_SetControlRegisters:
+        MOV  R5,(R4)
+        BICB $0b100,@$PBP0DT    # 0 - set data
+        INC  R5
+        INC  R5
+
+        BR   SetPaletteFB1_set_data$
+
+SetPaletteFB1_SetColorRegisters:
+        MOV  R5,(R4)
+        BISB $0b100,@$PBP0DT    # 0 - set data
+        INC  R5
+        INC  R5
+
+    SetPaletteFB1_set_data$:
+        MOV  R0,(R5)+
+        MOV  R1,(R5)+
+        INC  R5
+        INC  R5           # skip third word (screen line address)
+
+        INC  R3           # increase current line idx
+       .equiv SetPaletteFB1_NextLineNum, .+2
+        CMP  R3,$0        # compare current line idx with next line idx
+        BLO  SetPaletteFB1_set_params$  # branch if lower
+
+        CMP  @$SetPaletteFB1_NextLineNum,$MAIN_SCREEN_LINES_COUNT + 1
+        BNE  SetPaletteFB1_NextRecord
+
+        POP  R4 # remove a value from the stack
+SetPaletteFB1_Finalize:
+        POP  @$PASWCR
+
+        RETURN
+#----------------------------------------------------------------------------}}}
 ClearOffscreenArea: # -------------------------------------------------------{{{
         MOV  $AUX_SCREEN_LINES_COUNT * 4,R1
         MOV  $DTSOCT,R4
@@ -444,24 +560,24 @@ psgplayer.Play:
         INC  @$PBP12D
         INC  @$PLAY_NOW
         RETURN
+
+pt3play.Init: return
+pt3play.Play: return
+pt3play.Mute: return
 LoadDiskFile: # -------------------------------------------------------------{{{
         MOV  $1,@$VblankInt_SkipMusic
         MOV  R0,@$023200 # set ParamsStruct address for firmware proc to use
         CALL @$0125030   # firmware proc that handles channel 2
-       #CALL @07132      # stop floppy drive spindle
-       #CALL @$0134454   # stop floppy drive spindle
         CLR  @$VblankInt_SkipMusic
         RETURN
 #----------------------------------------------------------------------------}}}
 NULL:   RETURN
 
        .include "ppu/interrupts_handlers.s"
-      #.include "akg_player.s"
-      #.include "player_sound_effects.s"
        .include "psgplayer.s"
-      #.include "pt3play2.s"
+       .include "pt3play2.s"
 
-DummyPSG: .word 0
+DummyPSG: .word
 
 CommandsQueue_Top:
        .space 2*2*16

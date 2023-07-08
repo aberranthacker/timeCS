@@ -1,19 +1,20 @@
-AKG_PLAYER_PATH = ../akg_player
-BIN_UTILS_PATH=~/opt/binutils-pdp11/pdp11-dec-aout/bin
-BUILD_TOOLS_PATH= ../aku/uknc/build_tools
+AKG_PLAYER_PATH  = ../akg_player
+BIN_UTILS_PATH   = ~/opt/binutils-pdp11/pdp11-dec-aout/bin
+BUILD_TOOLS_PATH = ../aku/uknc/build_tools
 
-AS=$(BIN_UTILS_PATH)/as
-LD=$(BIN_UTILS_PATH)/ld
+AS = $(BIN_UTILS_PATH)/as
+LD = $(BIN_UTILS_PATH)/ld
 
-AOUT2SAV = $(BUILD_TOOLS_PATH)/aout2sav.rb
-BMP_TO_RAW = $(BUILD_TOOLS_PATH)/bmp_to_raw.rb
-BUILD_DSK = $(BUILD_TOOLS_PATH)/build_dsk.rb
-FORMAT_LIST = $(BUILD_TOOLS_PATH)/format_list.rb
-LZSA3 =  $(BUILD_TOOLS_PATH)/lzsa3
+AOUT2SAV       = $(BUILD_TOOLS_PATH)/aout2sav.rb
+BMP_TO_RAW     = $(BUILD_TOOLS_PATH)/bmp_to_raw.rb
+BUILD_DSK      = $(BUILD_TOOLS_PATH)/build_dsk.rb
+FORMAT_LIST    = $(BUILD_TOOLS_PATH)/format_list.rb
+LZSA3          = $(BUILD_TOOLS_PATH)/lzsa3
 UPDATE_DISKMAP = $(BUILD_TOOLS_PATH)/update_disk_map.rb
 # 2.38
 MAKEFLAGS += --silent --jobs
 LDFLAGS += --strip-all
+
 INCS = -I../aku/uknc -I$(AKG_PLAYER_PATH)
 
 .SUFFIXES:
@@ -30,6 +31,7 @@ all : pre-build build/timeCS.dsk
 
 pre-build :
 	mkdir -p build
+	mkdir -p build/clock1
 
 clean :
 	rm -rf build/*
@@ -43,8 +45,28 @@ build/timeCS.dsk : $(BUILD_DSK) \
 		   build/ppu_module.bin \
 		   build/loader.bin \
 		   build/title.bin \
-		   build/player.bin
+		   build/player.bin \
+		   build/song01.pt3.lzsa3 \
+		   build/song02.pt3.lzsa3 \
+		   build/song03.pt3.lzsa3 \
+		   build/song04.pt3.lzsa3 \
+		   build/song05.pt3.lzsa3 \
+		   build/song06.pt3.lzsa3 \
+		   build/song07.pt3.lzsa3 \
+		   build/song08.pt3.lzsa3 \
+		   build/song09.pt3.lzsa3 \
+		   build/song10.pt3.lzsa3 \
+		   build/song11.pt3.lzsa3 \
+		   build/song12.pt3.lzsa3 \
+		   build/song13.pt3.lzsa3 \
+		   build/song14.pt3.lzsa3 \
+		   build/song15.pt3.lzsa3 \
+		   build/song16.pt3.lzsa3 \
+		   build/song17.pt3.lzsa3 \
+		   build/song18.pt3.lzsa3 \
+		   build/clock1_gfx.bin
 	$(UPDATE_DISKMAP) dsk_flist build/title.map.txt build/title.bin -e 37264
+	$(UPDATE_DISKMAP) dsk_flist build/player.map.txt build/player.bin -e 37264
 	$(UPDATE_DISKMAP) dsk_flist build/bootsector.map.txt build/bootsector.bin
 	$(BUILD_DSK) dsk_flist build/timeCS.dsk
 # timeCS.dsk ----------------------------------------------------------------}}}
@@ -86,37 +108,51 @@ build/loader.o : $(COMMON) \
                loader.s \
                build/c2ay_toyhifi.raw
 	$(AS) loader.s $(INCS) -al -o build/loader.o | $(FORMAT_LIST)
+
+build/c2ay_toyhifi.raw : $(BMP_TO_RAW) gfx/c2ay_toyhifi.bmp
+	$(BMP_TO_RAW) gfx/c2ay_toyhifi.bmp build/c2ay_toyhifi.raw
 # loader.bin ----------------------------------------------------------------}}}
 
 # player.bin ----------------------------------------------------------------{{{
 build/player.bin : build/player.o
-	$(LD) $(LDFLAGS) build/player.o -o build/player.out
+	$(LD) $(LDFLAGS) -M build/player.o -o build/player.out > build/player.map.txt
 	ruby $(AOUT2SAV) build/player.out -b -s -o build/player.bin
 build/player.o : $(COMMON) \
                player.s \
                unlzsa3.s \
                build/loading.raw \
+               build/error.raw \
                build/mainscr.raw.lzsa \
                build/song_names.raw \
-               build/song01.ovl \
-               build/song02.ovl \
-               build/song03.ovl \
-               build/song04.ovl \
-               build/song05.ovl \
-               build/song06.ovl \
-               build/song07.ovl \
-               build/song08.ovl \
-               build/song09.ovl \
-               build/song10.ovl \
-               build/song11.ovl \
-               build/song12.ovl \
-               build/song13.ovl \
-               build/song14.ovl \
-               build/song15.ovl \
-               build/song16.ovl \
-               build/song17.ovl \
-               build/song18.ovl
+	       build/song01.pt3.lzsa3 \
+	       build/song02.pt3.lzsa3 \
+	       build/song03.pt3.lzsa3 \
+	       build/song04.pt3.lzsa3 \
+	       build/song05.pt3.lzsa3 \
+	       build/song06.pt3.lzsa3 \
+	       build/song07.pt3.lzsa3 \
+	       build/song08.pt3.lzsa3 \
+	       build/song09.pt3.lzsa3 \
+	       build/song10.pt3.lzsa3 \
+	       build/song11.pt3.lzsa3 \
+	       build/song12.pt3.lzsa3 \
+	       build/song13.pt3.lzsa3 \
+	       build/song14.pt3.lzsa3 \
+	       build/song15.pt3.lzsa3 \
+	       build/song16.pt3.lzsa3 \
+	       build/song17.pt3.lzsa3 \
+	       build/song18.pt3.lzsa3
 	$(AS) player.s $(INCS) -al -o build/player.o | $(FORMAT_LIST)
+build/mainscr.raw.lzsa : build/mainscr.raw
+	$(LZSA3) build/mainscr.raw build/mainscr.raw.lzsa
+build/mainscr.raw : $(BMP_TO_RAW) gfx/mainscr.bmp
+	$(BMP_TO_RAW) gfx/mainscr.bmp build/mainscr.raw
+build/loading.raw : $(BMP_TO_RAW) gfx/loading.bmp
+	$(BMP_TO_RAW) gfx/loading.bmp build/loading.raw
+build/error.raw : $(BMP_TO_RAW) gfx/error.bmp
+	$(BMP_TO_RAW) gfx/error.bmp build/error.raw
+build/song_names.raw: $(BMP_TO_RAW) gfx/song_names.bmp
+	$(BMP_TO_RAW) -b 1 gfx/song_names.bmp build/song_names.raw
 # player.bin ----------------------------------------------------------------}}}
 
 # title.bin ----------------------------------------------------------------{{{
@@ -141,10 +177,7 @@ build/title.o : $(COMMON) \
 		build/clockhand.raw \
 		build/w3.raw.lzsa
 	$(AS) title.s $(INCS) -al -o build/title.o | $(FORMAT_LIST)
-# title.bin -----------------------------------------------------------------}}}
 
-build/c2ay_toyhifi.raw : $(BMP_TO_RAW) gfx/c2ay_toyhifi.bmp
-	$(BMP_TO_RAW) gfx/c2ay_toyhifi.bmp build/c2ay_toyhifi.raw
 build/w3.raw.lzsa : build/w3.raw
 	$(LZSA3) build/w3.raw build/w3.raw.lzsa
 build/w3.raw : $(BMP_TO_RAW) gfx/w3.bmp
@@ -179,65 +212,179 @@ build/timecs_S.raw : $(BMP_TO_RAW) gfx/timecs_S.bmp
 build/clockhand.raw : $(BMP_TO_RAW) gfx/clockhand.bmp
 	$(BMP_TO_RAW) -b 1 gfx/clockhand.bmp build/clockhand.raw
 
-build/mainscr.raw.lzsa : build/mainscr.raw
-	$(LZSA3) build/mainscr.raw build/mainscr.raw.lzsa
-build/mainscr.raw : gfx/mainscr.bmp
-	$(BMP_TO_RAW) gfx/mainscr.bmp build/mainscr.raw
-build/loading.raw : $(BMP_TO_RAW) gfx/loading.bmp
-	$(BMP_TO_RAW) gfx/loading.bmp build/loading.raw
-build/song_names.raw: $(BMP_TO_RAW) gfx/song_names.bmp
-	$(BMP_TO_RAW) gfx/song_names.bmp build/song_names.raw
+# title.bin -----------------------------------------------------------------}}}
 
-build/song01.ovl : songs/12_b-AZuka.pt3
-	$(LZSA3) songs/12_b-AZuka.pt3 build/song01.ovl
+# Songs: --------------------------------------------------------------------{{{
+build/song01.pt3.lzsa3 : songs/12_b-AZuka.pt3
+	$(LZSA3) songs/12_b-AZuka.pt3 build/song01.pt3.lzsa3
 
-build/song02.ovl : songs/03_dontgurgle_6ch.pt3
-	$(LZSA3) songs/03_dontgurgle_6ch.pt3 build/song02.ovl
+build/song02.pt3.lzsa3 : songs/03_dontgurgle_6ch.pt3
+	$(LZSA3) songs/03_dontgurgle_6ch.pt3 build/song02.pt3.lzsa3
 
-build/song03.ovl : songs/04_wheelsinmotion_6ch.pt3
-	$(LZSA3) songs/04_wheelsinmotion_6ch.pt3 build/song03.ovl
+build/song03.pt3.lzsa3 : songs/04_wheelsinmotion_6ch.pt3
+	$(LZSA3) songs/04_wheelsinmotion_6ch.pt3 build/song03.pt3.lzsa3
 
-build/song04.ovl : songs/06_roadagain_6ch.pt3
-	$(LZSA3) songs/06_roadagain_6ch.pt3 build/song04.ovl
+build/song04.pt3.lzsa3 : songs/06_roadagain_6ch.pt3
+	$(LZSA3) songs/06_roadagain_6ch.pt3 build/song04.pt3.lzsa3
 
-build/song05.ovl : songs/07_inahurry_6ch.pt3
-	$(LZSA3) songs/07_inahurry_6ch.pt3 build/song05.ovl
+build/song05.pt3.lzsa3 : songs/07_inahurry_6ch.pt3
+	$(LZSA3) songs/07_inahurry_6ch.pt3 build/song05.pt3.lzsa3
 
-build/song06.ovl : songs/08_laidpath_6ch.pt3
-	$(LZSA3) songs/08_laidpath_6ch.pt3 build/song06.ovl
+build/song06.pt3.lzsa3 : songs/08_laidpath_6ch.pt3
+	$(LZSA3) songs/08_laidpath_6ch.pt3 build/song06.pt3.lzsa3
 
-build/song07.ovl : songs/09_walkedpast_6ch.pt3
-	$(LZSA3) songs/09_walkedpast_6ch.pt3 build/song07.ovl
+build/song07.pt3.lzsa3 : songs/09_walkedpast_6ch.pt3
+	$(LZSA3) songs/09_walkedpast_6ch.pt3 build/song07.pt3.lzsa3
 
-build/song08.ovl : songs/10_notyetstar_6ch.pt3
-	$(LZSA3) songs/10_notyetstar_6ch.pt3 build/song08.ovl
+build/song08.pt3.lzsa3 : songs/10_notyetstar_6ch.pt3
+	$(LZSA3) songs/10_notyetstar_6ch.pt3 build/song08.pt3.lzsa3
 
-build/song09.ovl : songs/11_freelane_6ch.pt3
-	$(LZSA3) songs/11_freelane_6ch.pt3 build/song09.ovl
+build/song09.pt3.lzsa3 : songs/11_freelane_6ch.pt3
+	$(LZSA3) songs/11_freelane_6ch.pt3 build/song09.pt3.lzsa3
 
-build/song10.ovl : songs/14_markedmap_6ch.pt3
-	$(LZSA3) songs/14_markedmap_6ch.pt3 build/song10.ovl
+build/song10.pt3.lzsa3 : songs/14_markedmap_6ch.pt3
+	$(LZSA3) songs/14_markedmap_6ch.pt3 build/song10.pt3.lzsa3
 
-build/song11.ovl : songs/15_waypooling_6ch.pt3
-	$(LZSA3) songs/15_waypooling_6ch.pt3 build/song11.ovl
+build/song11.pt3.lzsa3 : songs/15_waypooling_6ch.pt3
+	$(LZSA3) songs/15_waypooling_6ch.pt3 build/song11.pt3.lzsa3
 
-build/song12.ovl : songs/16_eternaldreamer_6ch.pt3
-	$(LZSA3) songs/16_eternaldreamer_6ch.pt3 build/song12.ovl
+build/song12.pt3.lzsa3 : songs/16_eternaldreamer_6ch.pt3
+	$(LZSA3) songs/16_eternaldreamer_6ch.pt3 build/song12.pt3.lzsa3
 
-build/song13.ovl : songs/17_distance6743_6ch.pt3
-	$(LZSA3) songs/17_distance6743_6ch.pt3 build/song13.ovl
+build/song13.pt3.lzsa3 : songs/17_distance6743_6ch.pt3
+	$(LZSA3) songs/17_distance6743_6ch.pt3 build/song13.pt3.lzsa3
 
-build/song14.ovl : songs/18_freedomisnothing_6ch.pt3
-	$(LZSA3) songs/18_freedomisnothing_6ch.pt3 build/song14.ovl
+build/song14.pt3.lzsa3 : songs/18_freedomisnothing_6ch.pt3
+	$(LZSA3) songs/18_freedomisnothing_6ch.pt3 build/song14.pt3.lzsa3
 
-build/song15.ovl : songs/19_escapingsilence_6ch.pt3
-	$(LZSA3) songs/19_escapingsilence_6ch.pt3 build/song15.ovl
+build/song15.pt3.lzsa3 : songs/19_escapingsilence_6ch.pt3
+	$(LZSA3) songs/19_escapingsilence_6ch.pt3 build/song15.pt3.lzsa3
 
-build/song16.ovl : songs/20_cafeview_6ch.pt3
-	$(LZSA3) songs/20_cafeview_6ch.pt3 build/song16.ovl
+build/song16.pt3.lzsa3 : songs/20_cafeview_6ch.pt3
+	$(LZSA3) songs/20_cafeview_6ch.pt3 build/song16.pt3.lzsa3
 
-build/song17.ovl : songs/21_openingdoors_6ch.pt3
-	$(LZSA3) songs/21_openingdoors_6ch.pt3 build/song17.ovl
+build/song17.pt3.lzsa3 : songs/21_openingdoors_6ch.pt3
+	$(LZSA3) songs/21_openingdoors_6ch.pt3 build/song17.pt3.lzsa3
 
-build/song18.ovl : songs/22_fmradio_6ch.pt3
-	$(LZSA3) songs/22_fmradio_6ch.pt3 build/song18.ovl
+build/song18.pt3.lzsa3 : songs/22_fmradio_6ch.pt3
+	$(LZSA3) songs/22_fmradio_6ch.pt3 build/song18.pt3.lzsa3
+#----------------------------------------------------------------------------}}}
+
+build/clock1_gfx.bin : build/clock1_gfx.o linker_scripts/bin.cmd #-----------{{{
+	$(LD) $(LDFLAGS) build/clock1_gfx.o -T linker_scripts/bin.cmd -o build/clock1_gfx.bin
+build/clock1_gfx.o : clock1_gfx.s \
+		     build/clock1/clock1.raw \
+		     build/clock1/digits1.raw \
+		     build/clock1/digits1_2.raw \
+		     build/clock1/numbers1.raw \
+		     build/clock1/circle1_left_off_0.raw \
+		     build/clock1/circle1_left_off_1.raw \
+		     build/clock1/circle1_left_off_2.raw \
+		     build/clock1/circle1_left_off_3.raw \
+		     build/clock1/circle1_left_off_4.raw \
+		     build/clock1/circle1_left_off_5.raw \
+		     build/clock1/circle1_left_off_6.raw \
+		     build/clock1/circle1_left_off_7.raw \
+		     build/clock1/circle1_left_on_0.raw \
+		     build/clock1/circle1_left_on_1.raw \
+		     build/clock1/circle1_left_on_2.raw \
+		     build/clock1/circle1_left_on_3.raw \
+		     build/clock1/circle1_left_on_4.raw \
+		     build/clock1/circle1_left_on_5.raw \
+		     build/clock1/circle1_left_on_6.raw \
+		     build/clock1/circle1_left_on_7.raw \
+		     build/clock1/circle1_right_off_0.raw \
+		     build/clock1/circle1_right_off_1.raw \
+		     build/clock1/circle1_right_off_2.raw \
+		     build/clock1/circle1_right_off_3.raw \
+		     build/clock1/circle1_right_off_4.raw \
+		     build/clock1/circle1_right_off_5.raw \
+		     build/clock1/circle1_right_off_6.raw \
+		     build/clock1/circle1_right_off_7.raw \
+		     build/clock1/circle1_right_on_0.raw \
+		     build/clock1/circle1_right_on_1.raw \
+		     build/clock1/circle1_right_on_2.raw \
+		     build/clock1/circle1_right_on_3.raw \
+		     build/clock1/circle1_right_on_4.raw \
+		     build/clock1/circle1_right_on_5.raw \
+		     build/clock1/circle1_right_on_6.raw \
+		     build/clock1/circle1_right_on_7.raw
+	$(AS) clock1_gfx.s $(INCS) -o build/clock1_gfx.o
+
+build/clock1/clock1.raw : gfx/clock1/CLOCK1.bmp
+	$(BMP_TO_RAW) gfx/clock1/CLOCK1.bmp build/clock1/clock1.raw
+build/clock1/digits1.raw : gfx/clock1/digits1.bmp
+	$(BMP_TO_RAW) gfx/clock1/digits1.bmp build/clock1/digits1.raw
+build/clock1/digits1_2.raw : gfx/clock1/digits1_2.bmp
+	$(BMP_TO_RAW) gfx/clock1/digits1_2.bmp build/clock1/digits1_2.raw
+build/clock1/numbers1.raw : gfx/clock1/numbers1.bmp
+	$(BMP_TO_RAW) gfx/clock1/numbers1.bmp build/clock1/numbers1.raw
+
+build/clock1/circle1_left_off_0.raw : gfx/clock1/circle1_left_off_0.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_left_off_0.bmp build/clock1/circle1_left_off_0.raw
+build/clock1/circle1_left_off_1.raw : gfx/clock1/circle1_left_off_1.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_left_off_1.bmp build/clock1/circle1_left_off_1.raw
+build/clock1/circle1_left_off_2.raw : gfx/clock1/circle1_left_off_2.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_left_off_2.bmp build/clock1/circle1_left_off_2.raw
+build/clock1/circle1_left_off_3.raw : gfx/clock1/circle1_left_off_3.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_left_off_3.bmp build/clock1/circle1_left_off_3.raw
+build/clock1/circle1_left_off_4.raw : gfx/clock1/circle1_left_off_4.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_left_off_4.bmp build/clock1/circle1_left_off_4.raw
+build/clock1/circle1_left_off_5.raw : gfx/clock1/circle1_left_off_5.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_left_off_5.bmp build/clock1/circle1_left_off_5.raw
+build/clock1/circle1_left_off_6.raw : gfx/clock1/circle1_left_off_6.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_left_off_6.bmp build/clock1/circle1_left_off_6.raw
+build/clock1/circle1_left_off_7.raw : gfx/clock1/circle1_left_off_7.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_left_off_7.bmp build/clock1/circle1_left_off_7.raw
+
+build/clock1/circle1_left_on_0.raw : gfx/clock1/circle1_left_on_0.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_left_on_0.bmp build/clock1/circle1_left_on_0.raw
+build/clock1/circle1_left_on_1.raw : gfx/clock1/circle1_left_on_1.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_left_on_1.bmp build/clock1/circle1_left_on_1.raw
+build/clock1/circle1_left_on_2.raw : gfx/clock1/circle1_left_on_2.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_left_on_2.bmp build/clock1/circle1_left_on_2.raw
+build/clock1/circle1_left_on_3.raw : gfx/clock1/circle1_left_on_3.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_left_on_3.bmp build/clock1/circle1_left_on_3.raw
+build/clock1/circle1_left_on_4.raw : gfx/clock1/circle1_left_on_4.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_left_on_4.bmp build/clock1/circle1_left_on_4.raw
+build/clock1/circle1_left_on_5.raw : gfx/clock1/circle1_left_on_5.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_left_on_5.bmp build/clock1/circle1_left_on_5.raw
+build/clock1/circle1_left_on_6.raw : gfx/clock1/circle1_left_on_6.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_left_on_6.bmp build/clock1/circle1_left_on_6.raw
+build/clock1/circle1_left_on_7.raw : gfx/clock1/circle1_left_on_7.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_left_on_7.bmp build/clock1/circle1_left_on_7.raw
+
+build/clock1/circle1_right_off_0.raw : gfx/clock1/circle1_right_off_0.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_right_off_0.bmp build/clock1/circle1_right_off_0.raw
+build/clock1/circle1_right_off_1.raw : gfx/clock1/circle1_right_off_1.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_right_off_1.bmp build/clock1/circle1_right_off_1.raw
+build/clock1/circle1_right_off_2.raw : gfx/clock1/circle1_right_off_2.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_right_off_2.bmp build/clock1/circle1_right_off_2.raw
+build/clock1/circle1_right_off_3.raw : gfx/clock1/circle1_right_off_3.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_right_off_3.bmp build/clock1/circle1_right_off_3.raw
+build/clock1/circle1_right_off_4.raw : gfx/clock1/circle1_right_off_4.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_right_off_4.bmp build/clock1/circle1_right_off_4.raw
+build/clock1/circle1_right_off_5.raw : gfx/clock1/circle1_right_off_5.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_right_off_5.bmp build/clock1/circle1_right_off_5.raw
+build/clock1/circle1_right_off_6.raw : gfx/clock1/circle1_right_off_6.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_right_off_6.bmp build/clock1/circle1_right_off_6.raw
+build/clock1/circle1_right_off_7.raw : gfx/clock1/circle1_right_off_7.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_right_off_7.bmp build/clock1/circle1_right_off_7.raw
+
+build/clock1/circle1_right_on_0.raw : gfx/clock1/circle1_right_on_0.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_right_on_0.bmp build/clock1/circle1_right_on_0.raw
+build/clock1/circle1_right_on_1.raw : gfx/clock1/circle1_right_on_1.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_right_on_1.bmp build/clock1/circle1_right_on_1.raw
+build/clock1/circle1_right_on_2.raw : gfx/clock1/circle1_right_on_2.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_right_on_2.bmp build/clock1/circle1_right_on_2.raw
+build/clock1/circle1_right_on_3.raw : gfx/clock1/circle1_right_on_3.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_right_on_3.bmp build/clock1/circle1_right_on_3.raw
+build/clock1/circle1_right_on_4.raw : gfx/clock1/circle1_right_on_4.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_right_on_4.bmp build/clock1/circle1_right_on_4.raw
+build/clock1/circle1_right_on_5.raw : gfx/clock1/circle1_right_on_5.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_right_on_5.bmp build/clock1/circle1_right_on_5.raw
+build/clock1/circle1_right_on_6.raw : gfx/clock1/circle1_right_on_6.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_right_on_6.bmp build/clock1/circle1_right_on_6.raw
+build/clock1/circle1_right_on_7.raw : gfx/clock1/circle1_right_on_7.bmp
+	$(BMP_TO_RAW) gfx/clock1/circle1_right_on_7.bmp build/clock1/circle1_right_on_7.raw
+#----------------------------------------------------------------------------}}}

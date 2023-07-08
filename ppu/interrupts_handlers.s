@@ -134,8 +134,6 @@ CommandsQueue_Full:
 Channel1In_IntHandler: #-----------------------------------------------------{{{
         MTPS $PR7
         PUSH R0
-        PUSH R1
-        PUSH R2
         PUSH R4
         PUSH R5
         PUSH @$PBPADR
@@ -144,53 +142,31 @@ Channel1In_IntHandler: #-----------------------------------------------------{{{
         BZE  ShowFB0
         BR   ShowFB1
 ShowFB0: #----------------------------------------------------------------------
-        MOV  $0x20,R0
-        MOV  $8,R1 # length of the screenlines table record
-        MOV  $MAIN_SCREEN_LINES_COUNT>>3,R2
-        MOV  $PBP0DT,R4
-        MOV  $PBPADR,R5
-       .equiv FirstMainScreenLinePointer, .+2
-        MOV  $0,(R5)
-        INC  (R5)
-
-100$:  .rept 1<<3
-        BICB R0,(R4)
-        ADD  R1,(R5)
-       .endr
-        SOB  R2,100$
-
-        BR   Channel1In_IntHandler_Finalize
+       .equiv FB0_FirstRecAddr, .+2
+        MOV  $0,R0
+        BR   SetFBAddr
 #-------------------------------------------------------------------------------
 ShowFB1: #----------------------------------------------------------------------
-        MOV  $0x20,R0
-        MOV  $8,R1 # length of the screenlines table record
-        MOV  $MAIN_SCREEN_LINES_COUNT>>3,R2
+       .equiv FB1_FirstRecAddr, .+2
+        MOV  $0,R0
+#-------------------------------------------------------------------------------
+SetFBAddr:
         MOV  $PBP0DT,R4
         MOV  $PBPADR,R5
-        MOV  @$FirstMainScreenLinePointer,(R5)
+
+       .equiv MainScreenFirstRecAddr, .+2
+        MOV  $0,(R5)
+        BIS  $0b0110,R0
+        MOVB R0,(R4)
         INC  (R5)
-
-100$:  .rept 1<<3
-        BISB R0,(R4)
-        ADD  R1,(R5)
-       .endr
-        SOB  R2,100$
-
-        BR   Channel1In_IntHandler_Finalize
-#-------------------------------------------------------------------------------
-Channel1In_IntHandler_Finalize:
-        MOV  @$CommandsQueue_CurrentPosition,R5
-   .ifdef DebugMode
-        CMP  R5,$CommandsQueue_Top
-        BLOS CommandsQueue_Full
-   .endif
+        SWAB R0
+        MOVB R0,(R4)
 
         POP  @$PBPADR
         POP  R5
         POP  R4
-        POP  R2
-        POP  R1
         POP  R0
         MTPS $PR0
+
         RTI
 #----------------------------------------------------------------------------}}}

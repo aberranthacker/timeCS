@@ -1,5 +1,3 @@
-# vim: set tabstop=4 :
-
 #---------------------------------------------------------------------
 #   PT3 PLAYER with TS support by KUVO, 02022 CSI
 #   
@@ -21,30 +19,26 @@
                         .global PARAM_SIZE
 
 PLAYER_ENTRY_POINTS:
-
                         .word pt3play2.INIT     #+0  First call before playback
                         .word pt3play2.PLAY     #+2  Main play call for the next position in PT3 file (one quark, one tick)
-                        .word pt3play2.MUTE         #+4  Mute the sound
+                        .word pt3play2.MUTE     #+4  Mute the sound
 
 INTEGRATION_POINTS:
+    FRAME_NUMBER:         .word 0                             #  +6 Incremented by one each time the PLAY entry point is accessed
+    TS_PRESENT:           .word 0                             #+010 TS sign
+    SEL_DEVICE:           .word 0                             #+012 Auto selected device: 0 - legacy AY/YM or TurboSound or GryphonSound, 1 - AZBK 
+    PARAMETERS_AY1_ADDR:  .word PARAMETERS_AY1                #+014 Address of the operating parameters of AY1
+    PARAMETERS_AY2_ADDR:  .word PARAMETERS_AY2                #+016 Address of the operating parameters of AY2
+    AYREGS_AY1:           .word PARAMETERS_AY1 + PARAM_AYREGS #+020 Address of last sent AY1 register values
+    AYREGS_AY2:           .word PARAMETERS_AY2 + PARAM_AYREGS #+022 Address of last sent AY2 register values
+    PT3FILE_MODULE1_ADDR: .word 0100000                       #+024 PT3 file address
+    PT3FILE_MODULE2_ADDR: .word 0                             #+026 Address of module 2 (TS) in PT3 file
+    PT3FILE_END_ADDR:     .word 0                             #+030 Address of end PT3 file
+    END_OF_PT3FILE:       .word 0                             #+032 CODA. End of PT3 file reached (incremented by one each time)
+    NO_REPEAT_MODE:       .word 1                             #+034 Play without repeat. Set (not zero) before INIT call.
+    REPETITION_NUMBER:    .word 0                             #+036 Number of elapsed repetitions after end of PT3 file
 
-    FRAME_NUMBER:           .word 0                             #  +6 Incremented by one each time the PLAY entry point is accessed
-    TS_PRESENT:             .word 0                             #+010 TS sign
-    SEL_DEVICE:             .word 0                             #+012 Auto selected device: 0 - legacy AY/YM or TurboSound or GryphonSound, 1 - AZBK 
-    PARAMETERS_AY1_ADDR:    .word PARAMETERS_AY1                #+014 Address of the operating parameters of AY1
-    PARAMETERS_AY2_ADDR:    .word PARAMETERS_AY2                #+016 Address of the operating parameters of AY2
-    AYREGS_AY1:             .word PARAMETERS_AY1 + PARAM_AYREGS #+020 Address of last sent AY1 register values
-    AYREGS_AY2:             .word PARAMETERS_AY2 + PARAM_AYREGS #+022 Address of last sent AY2 register values
-    PT3FILE_MODULE1_ADDR:   .word 040000                        #+024 PT3 file address
-    PT3FILE_MODULE2_ADDR:   .word 0                             #+026 Address of module 2 (TS) in PT3 file
-    PT3FILE_END_ADDR:       .word 0                             #+030 Address of end PT3 file
-    END_OF_PT3FILE:         .word 0                             #+032 CODA. End of PT3 file reached (incremented by one each time)
-    NO_REPEAT_MODE:         .word 1                             #+034 Play without repeat. Set (not zero) before INIT call.
-    REPETITION_NUMBER:      .word 0                             #+036 Number of elapsed repetitions after end of PT3 file
-
-
-
-    CUR_PARAMS_ADDR:        .word 0                             #+040
+    CUR_PARAMS_ADDR:      .word 0                             #+040
 
 
 TS_ID:
@@ -53,44 +47,57 @@ TS_ID_END:
 
 TS_ID_CHECK:
             MOV $4, R4
-        10$:CMPB -(R0), -(R2)
-            BNE 1$
-
+            10$:
+                DEC  (R4) # @$PBPADR
+                CMPB (R0), -(R2)
+                BNE 1237$
             SOB R4, 10$
 
-        1$: RETURN
+1237$:      RETURN
 
 pt3play2.INIT:
-        #CLR TS_PRESENT
-        #CLR SEL_DEVICE
+           #CLR TS_PRESENT
+           #CLR SEL_DEVICE
             CLR FRAME_NUMBER
             CLR END_OF_PT3FILE
             CLR PT3FILE_MODULE2_ADDR
             CLR REPETITION_NUMBER
-            #MOV $PT3FILE_END, PT3FILE_END_ADDR
+            #;MOV $PT3FILE_END, PT3FILE_END_ADDR
+            MOV $PBPADR,R4
+            MOV $PBP12D,R0
+            MOV $PPT3.PT3FILE_MODULE1_ADDR, (R4)
+            MOV (R0), PT3FILE_MODULE1_ADDR
+            INC (R4)
+            MOV (R0), PT3FILE_END_ADDR
 
             MOV $PARAM_DEVICES_AY1, R3
             CLR (R3)+
             MOV $0100000, (R3)+
-            MOV $AY_1_PORT, (R3)+
-            #MOV $PARAMETERS_AY1, R3
+            MOV $PSG0, (R3)+
+            #;MOV $PARAMETERS_AY1, R3
             MOV PT3FILE_MODULE1_ADDR, R1
 
     TS_DETECT:
-            MOV PT3FILE_END_ADDR, R0
+            MOV PT3FILE_END_ADDR, (R4)
+            MOV $PBP1DT,R0
             MOV $TS_ID_END, R2
+
             CALL TS_ID_CHECK
             BNE INIT_NEXT
 
-            SUB $2, R0          #SKIP LENGTH OF SECOND MODULE
+            SUB $2, (R4) # @$PBPADR # SKIP LENGTH OF SECOND MODULE
+
             CALL TS_ID_CHECK
             BNE INIT_NEXT
 
-            CLR R5              #GET OFFSET TO SECOND MODULE
-            BISB -(R0), R5
+            CLR R5       # GET OFFSET TO SECOND MODULE
+            DEC  (R4) # @$PBPADR
+            BISB (R0), R5
             SWAB R5
-            BISB -(R0), R5
-            ADD PT3FILE_MODULE1_ADDR, R5    #GET ADDRESS OF SECOND MODULE
+            DEC  (R4) # @$PBPADR
+            BISB (R0), R5
+            ADD PT3FILE_MODULE1_ADDR, R5 # GET ADDRESS OF SECOND MODULE
+
             CALL TS_ID_CHECK
             BNE INIT_NEXT
 
@@ -98,78 +105,88 @@ pt3play2.INIT:
 
             INC SEL_DEVICE
 
-            MOV R5, -(SP)
+            PUSH R5
 
             CALL INIT_NEXT
 
-            MOV (SP)+, R1
+            POP  R1
 
             MOV R1, PT3FILE_MODULE2_ADDR
 
             MOV $PARAM_DEVICES_AY2, R3
             MOV $1, (R3)+
             MOV $040000, (R3)+
-            MOV $AY_2_PORT, (R3)+
-            #MOV $PARAMETERS_AY2, R3
+            MOV $PSG1, (R3)+
+           #;MOV $PARAMETERS_AY2, R3
 
 INIT_NEXT:
-
+          # R4 = PBPADR
+          # R0 = PBP1DT
+          # R1 = PT3FILE_MODULE1_ADDR
+          # R3 = PARAMETERS_AY1
             MOV R3, CUR_PARAMS_ADDR
 
-            MOV R1, PARAM_MODULE_ADDRESS(R3)
-            MOV R1, R5  
-            MOVB 100(R5), PARAM_DELAY(R3)
-            ADD $200, R1   
-            MOV R1, PARAM_CURRENTPOSITION(R3)
-            MOVB 102(R5), R2 
-            ADD R2, R1
-            INC R1
-            MOV R1, PARAM_LOOPPOSITION(R3)
-            CLR R1
-            BISB 104(R5), R1 
+            MOV  R1, PARAM_MODULE_ADDRESS(R3)
+            MOV  R1, R5  
+            MOV  R5,(R4)
+            ADD  $100,(R4) # MOVB 100(R5), PARAM_DELAY(R3)
+            MOVB (R0), PARAM_DELAY(R3)
+            ADD  $200, R1   
+            MOV  R1, PARAM_CURRENTPOSITION(R3)
+            ADD  $2,(R4)   # MOVB 102(R5), R2 
+            MOVB (R0), R2
+            ADD  R2, R1
+            INC  R1
+            MOV  R1, PARAM_LOOPPOSITION(R3)
+            CLR  R1
+            ADD  $2,(R4)   # BISB 104(R5), R1 
+            BISB (R0), R1
             SWAB R1
-            BISB 103(R5), R1 
-            ADD R5, R1  
-            MOV R1, PARAM_PATTERNSPOINTER(R3) 
-            MOV $169, R1
-            ADD R5, R1  
-            MOV R1, PARAM_ORNAMENTSPOINTERS(R3)  
-            MOV $105, R1
-            ADD R5, R1  
-            MOV R1, PARAM_SAMPLESPOINTERS(R3)
+            DEC  (R4)      # BISB 103(R5), R1
+            BISB (R0), R1
+            ADD  R5, R1  
+            MOV  R1, PARAM_PATTERNSPOINTER(R3) 
+            MOV  $169, R1
+            ADD  R5, R1  
+            MOV  R1, PARAM_ORNAMENTSPOINTERS(R3)  
+            MOV  $105, R1
+            ADD  R5, R1  
+            MOV  R1, PARAM_SAMPLESPOINTERS(R3)
 
-            MOV R5, -(SP)
- 
-            MOV $TABLES_PACK, R4 
-            MOV $PARAM_TAB_WORK + 98, R5
-            ADD R3, R5
+            PUSH R5
+#-----------------!!!!!
+            MOV  $TABLES_PACK, R4 
+            MOV  $PARAM_TAB_WORK + 98, R5
+            ADD  R3, R5
 
-            MOV $4, R3
-            MOV $12, R2
-    10$:        MOV (R4)+, R0   
-            ASL R0  
-            BR  2$  
+            MOV  $4, R3
+            MOV  $12, R2
+            10$:    
+                MOV (R4)+, R0   
+                ASL  R0  
+                BR   2$  
 
-    1$:     CLR R1
-            BISB (R4)+, R1   
-            ADD R1, R0  
-            ADD R1, R0
-    2$:     MOV R0, -(R5)   
-            SOB R2, 1$  
-            MOVB (R4)+, R2   
-            INC R4
-            BIC $1, R4  
+                1$:
+                    CLR  R1
+                    BISB (R4)+, R1   
+                    ADD R1, R0  
+                    ADD R1, R0
+                2$: MOV R0, -(R5)   
+                SOB R2, 1$  
+
+                MOVB (R4)+, R2   
+                INC R4
+                BIC $1, R4  
             SOB R3, 10$  
 
             MOV CUR_PARAMS_ADDR, R5
-
  
             MOV $PARAM_VAR0START, R1
             ADD R5, R1
             MOV $PARAM_VAR0END - PARAM_VAR0START, R3
-    3$:     CLRB (R1)+
+            3$:
+                CLRB (R1)+
             SOB R3, 3$
-
 
             MOVB $1, PARAM_DELAYCOUNTER(R5)
             MOV $0xF001, R0 
@@ -189,103 +206,110 @@ INIT_NEXT:
             .byte   AY_TONC, AY_AMPLITUDEC
             CALL FILL
 
-            MOV (SP)+, R5
+            POP  R5
 
             MOVB 13(R5), R0  
             SUB $060, R0  
             BCS 4$  
+
             CMPB R0, $10
             BLO 5$  
-    4$:     MOV $6, R0   
-    5$:     MOV CUR_PARAMS_ADDR, R2
+
+    4$:     MOV  $6, R0   
+    5$:     MOV  CUR_PARAMS_ADDR, R2
             MOVB R0, PARAM_VERSION(R2) 
-            MOV R0, -(SP)   
+            PUSH R0
             CMPB R0, $4   
             MOVB 99(R5), R0  
             ROLB R0   
             BICB $0177770, R0  
 
 NOTE_TABLE_MAKER:
-
-            MOV R1, -(SP)   
-            MOV $NT_DATA, R1
-            ADD R0, R1
-            ADD R0, R1
-            ADD R0, R1  
-            CLR R2
+            PUSH R1
+            MOV  $NT_DATA, R1
+            ADD  R0, R1
+            ADD  R0, R1
+            ADD  R0, R1  
+            CLR  R2
             BISB (R1)+, R2   
-            MOV (PC)+, R0
+            MOV  (PC)+, R0
             NOP
             TSTB (R1)+   
-            BEQ 10$
-            MOV (PC)+, R0   
+            BEQ  10$
+            MOV  (PC)+, R0   
             CLC
-    10$:        MOV R0, MULTY_SUBR
+    10$:    MOV  R0, MULTY_SUBR
 
-            CLR R3
+            CLR  R3
             BISB (R1), R3
-            ADD $TABLES ,R3
+            ADD  $TABLES ,R3
+
             ADD  (SP)+, R2   
 
-            MOV R3, -(SP)
-            MOV $PARAM_NOTE_TAB, R1 
-            ADD CUR_PARAMS_ADDR, R1
-            MOV R1, -(SP)
+            PUSH R3
+            MOV  $PARAM_NOTE_TAB, R1 
+            ADD  CUR_PARAMS_ADDR, R1
+            PUSH R1
 
-            MOV $12, R4 
-    1$:     MOV (R2)+, R3   
+            MOV  $12, R4 
+            1$:
+                MOV  (R2)+, R3   
+                PUSH R1
+                MOV  $8, R5  
+                2$:
+                    CLC
+                    ROR  R3
+                    CALL MULTY_SUBR   
+                    MOV  R3, R0
+                    ADC  R0
+                    MOV  R0, (R1)
+                    ADD  $24, R1
+                SOB  R5, 2$
+                POP  R1
+                TST  (R1)+   
+            SOB  R4, 1$
 
-            MOV R1, -(SP)
-            MOV $8, R5  
-    2$:     CLC
-            ROR R3
-            CALL MULTY_SUBR   
-            MOV R3, R0
-            ADC R0
-            MOV R0, (R1)
-            ADD $24, R1
-            SOB R5, 2$
-            MOV (SP)+, R1
-            TST (R1)+   
-            SOB R4, 1$
-
-            MOV (SP)+, R2   
-            MOV (SP)+, R1   
+            POP  R2   
+            POP  R1   
 
             CMP R1, $TAB_C_OLD_1
             BNE 3$
             MOV CUR_PARAMS_ADDR, R0
             MOVB $0xFD, PARAM_NOTE_TAB + 056(R0)
-    3$:     CLR R0
-            BISB (R1)+, R0
-            BEQ 5$
-            CLR R5
-            RORB R0  
-            ROL R5  
-            ASLB R0  
-            ADD R0, R2  
-            TST R5  
-            BEQ 4$
-            SUB $2, (R2)
-    4$:     INC (R2)
-            SUB R0, R2 
-            BR  3$
 
-    5$:     MOV (SP)+, R0   
+    3$:     CLR  R0
+            BISB (R1)+, R0
+            BEQ  5$
+
+            CLR  R5
+            RORB R0  
+            ROL  R5  
+            ASLB R0  
+            ADD  R0, R2  
+            TST  R5  
+            BEQ  4$
+
+            SUB  $2, (R2)
+    4$:     INC  (R2)
+            SUB  R0, R2 
+            BR   3$
+
+    5$:     POP  R0   
 
 
 VOL_TABLE_MAKER:
-
             MOV $021, R3 
             CLR R1  
             CMPB R0, $5  
             MOV (PC)+, R0
             ASLB R0  
             BHIS 10$
+
             DEC R3  
             MOV R3, R1  
             MOV (PC)+, R0
             NOP  
+
     10$:    MOV R0, MULTY_SUBR
 
             MOV $PARAM_VOL_TAB, R4 
@@ -297,30 +321,33 @@ VOL_TABLE_MAKER:
     1$:     CLR (R4)+   
             SOB R0, 1$
 
-    2$:     MOV R3, -(SP)  
+    2$:     PUSH R3
 
             ADD R3, R1  
             MOV $0, R3  
             SBC R3  
 
     3$:     MOVB R3, R0  
-            MOV R3, R4  
+            MOV  R3, R4  
             CLRB R4
             SWAB R4  
             CALL MULTY_SUBR
             ADCB R4
             MOVB R4, (R5)+
-            ADD R1, R3
-            INC R2  
-            MOV R2, R0
-            BIC $0177760, R0
-            BNE 3$
-            MOV (SP)+, R3
-            CMP R1, $119
-            BNE 4$
+            ADD  R1, R3
+            INC  R2  
+            MOV  R2, R0
+            BIC  $0177760, R0
+            BNE  3$
+
+            POP   R3
+            CMP  R1, $119
+            BNE  4$
+
             INC R1
     4$:     TSTB R2  
             BNE 2$
+
             JMP REG_OUT
 
 MULTY_SUBR:
@@ -331,9 +358,6 @@ pt3play2.PLAY:
             INC FRAME_NUMBER
 
             MOV $PARAMETERS_AY1, R4
-
-            TST TS_PRESENT
-            BEQ PLAY_NEXT
 
             CALL PLAY_NEXT
 
@@ -468,20 +492,20 @@ REG_OUT:    MOV CUR_PARAMS_ADDR, R0
     REG_OUT_DEVICE_MANAGE:
            .equiv pt3play2.AY_PORT, .+2
             MOV  $0177360,R5
-            MOV $015, R1
+            MOV  $015, R1
             MOVB (R4), R0
-            BMI 10$
+            BMI  10$
 
             MOV  R1, (R5)
             MOVB R0, (R5)
-    10$:    DEC R1
-            BMI 1$
+    10$:    DEC  R1
+            BMI  1237$
 
             MOV  R1, (R5)
             MOVB -(R4), (R5)
-            BR 10$
+            BR   10$
 
-    1$:     RETURN
+1237$:      RETURN
 
 pt3play2.MUTE:
             MOV $PARAMETERS_AY1, R4
@@ -741,7 +765,7 @@ CHANGE_REGS:
             MOV CUR_PARAMS_ADDR, R2
             ADD R2, R0
             MOVB R1, PARAM_AYREGS(R0)
-            .set offset, PARAM_AYREGS + AY_MIXER
+           .set offset, PARAM_AYREGS + AY_MIXER
             ASRB offset(R2)
             TSTB CHP_CURRENT_ONOFF(R5)
             BEQ 1$
@@ -930,7 +954,6 @@ FILL:       MOV R0, CHP_NOTE_SKIP_COUNTER(R4)
             AY_ENVELOPETYPE = 13
 
 
-
             CHP_POSITION_IN_ORNAMENT = 0 
             CHP_POSITION_IN_SAMPLE = 1 
             CHP_CURRENT_AMPLITUDE_SLIDING= 2 
@@ -1109,7 +1132,10 @@ NT_DATA:
             
             PARAM_VAR0END =           PARAM_TAB_WORK
 
-PARAM_DEVICES_AY1: .space 6
+PARAM_DEVICES_AY1:
+    .word 0
+    .word 0100000 # PSG0 pt3 start
+    .word PSG0
 PARAMETERS_AY1:    .space PARAM_SIZE
 
 PARAM_DEVICES_AY2: .space 6
