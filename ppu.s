@@ -1,4 +1,4 @@
-               .list
+               .nolist
 
                .title Chibi Akumas PPU module
 
@@ -342,9 +342,10 @@ CommandVectors:
        .word SetPaletteFB1         # PPU.SetPalette
        .word psgplayer.MUS_INIT
        .word psgplayer.Play
-       .word pt3play.Init
-       .word pt3play.Play
-       .word pt3play.Mute
+       .word pt3play2.INIT
+       .word pt3play2.MUTE
+       .word pt3play2.Start
+       .word pt3play2.Stop
 #-------------------------------------------------------------------------------
 SetPalette: #----------------------------------------------------------------{{{
         PUSH @$PASWCR
@@ -561,9 +562,12 @@ psgplayer.Play:
         INC  @$PLAY_NOW
         RETURN
 
-pt3play.Init: return
-pt3play.Play: return
-pt3play.Mute: return
+pt3play2.Start: 
+        MOV  $pt3play2.PLAY,@$PlayMusicProc
+        RETURN
+pt3play2.Stop:
+        MOV  $NULL,@$PlayMusicProc
+        RETURN
 LoadDiskFile: # -------------------------------------------------------------{{{
         MOV  $1,@$VblankInt_SkipMusic
         MOV  R0,@$023200 # set ParamsStruct address for firmware proc to use

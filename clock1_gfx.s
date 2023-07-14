@@ -1,3 +1,40 @@
+.global CLOCK1
+.global digits1
+.global digits2
+.global numbers
+.global circle_left_off_0
+.global circle_left_off_1
+.global circle_left_off_2
+.global circle_left_off_3
+.global circle_left_off_4
+.global circle_left_off_5
+.global circle_left_off_6
+.global circle_left_off_7
+.global circle_left_on_0
+.global circle_left_on_1
+.global circle_left_on_2
+.global circle_left_on_3
+.global circle_left_on_4
+.global circle_left_on_5
+.global circle_left_on_6
+.global circle_left_on_7
+.global circle_right_off_0
+.global circle_right_off_1
+.global circle_right_off_2
+.global circle_right_off_3
+.global circle_right_off_4
+.global circle_right_off_5
+.global circle_right_off_6
+.global circle_right_off_7
+.global circle_right_on_0
+.global circle_right_on_1
+.global circle_right_on_2
+.global circle_right_on_3
+.global circle_right_on_4
+.global circle_right_on_5
+.global circle_right_on_6
+.global circle_right_on_7
+
 CATALOGUE:
             .word CLOCK1 - CATALOGUE             #  +00
             .word digits1 - CATALOGUE            #  +02

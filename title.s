@@ -9,7 +9,7 @@
 #   COMPILER:       PDPy11
 #
 #-------------------------------------------------------------------------------
-           .list
+           .nolist
 
            .include "hwdefs.s"
            .include "macros.s"

@@ -30,8 +30,10 @@ COMMON = defs.s ../aku/uknc/hwdefs.s ../aku/uknc/macros.s
 all : pre-build build/timeCS.dsk
 
 pre-build :
-	mkdir -p build
 	mkdir -p build/clock1
+	mkdir -p build/clock2
+	mkdir -p build/clock3
+	mkdir -p build/clock4
 
 clean :
 	rm -rf build/*
@@ -46,6 +48,10 @@ build/timeCS.dsk : $(BUILD_DSK) \
 		   build/loader.bin \
 		   build/title.bin \
 		   build/player.bin \
+		   build/clock1_screen.bin.lzsa3 \
+		   build/clock2_screen.bin.lzsa3 \
+		   build/clock3_screen.bin.lzsa3 \
+		   build/clock4_screen.bin.lzsa3 \
 		   build/song01.pt3.lzsa3 \
 		   build/song02.pt3.lzsa3 \
 		   build/song03.pt3.lzsa3 \
@@ -63,8 +69,7 @@ build/timeCS.dsk : $(BUILD_DSK) \
 		   build/song15.pt3.lzsa3 \
 		   build/song16.pt3.lzsa3 \
 		   build/song17.pt3.lzsa3 \
-		   build/song18.pt3.lzsa3 \
-		   build/clock1_gfx.bin
+		   build/song18.pt3.lzsa3
 	$(UPDATE_DISKMAP) dsk_flist build/title.map.txt build/title.bin -e 37264
 	$(UPDATE_DISKMAP) dsk_flist build/player.map.txt build/player.bin -e 37264
 	$(UPDATE_DISKMAP) dsk_flist build/bootsector.map.txt build/bootsector.bin
@@ -121,6 +126,7 @@ build/player.o : $(COMMON) \
                player.s \
                unlzsa3.s \
                unlzsa3_to_bp.s \
+               unlzsa3_from_bp.s \
                build/loading.raw \
                build/error.raw \
                build/mainscr.raw.lzsa \
@@ -215,6 +221,10 @@ build/clockhand.raw : $(BMP_TO_RAW) gfx/clockhand.bmp
 
 # title.bin -----------------------------------------------------------------}}}
 
+clock_defs.s : build/player.o clock_start_update.rb
+	./clock_start_update.rb
+	touch clock_defs.s
+
 # Songs: --------------------------------------------------------------------{{{
 build/song01.pt3.lzsa3 : songs/12_b-AZuka.pt3
 	$(LZSA3) songs/12_b-AZuka.pt3 build/song01.pt3.lzsa3
@@ -271,8 +281,22 @@ build/song18.pt3.lzsa3 : songs/22_fmradio_6ch.pt3
 	$(LZSA3) songs/22_fmradio_6ch.pt3 build/song18.pt3.lzsa3
 #----------------------------------------------------------------------------}}}
 
-build/clock1_gfx.bin : build/clock1_gfx.o linker_scripts/bin.cmd #-----------{{{
-	$(LD) $(LDFLAGS) build/clock1_gfx.o -T linker_scripts/bin.cmd -o build/clock1_gfx.bin
+ # build/clock1_screen.bin -----------{{{
+build/clock1_screen.bin.lzsa3 : build/clock1_screen.bin
+	$(LZSA3) build/clock1_screen.bin build/clock1_screen.bin.lzsa3
+
+build/clock1_screen.bin : build/clock1_screen.o \
+			  build/player.o
+	$(LD) $(LDFLAGS) build/clock1_screen.o -R build/player.o -o build/clock1_screen.out
+	$(AOUT2SAV) build/clock1_screen.out -b -s -o build/clock1_screen.bin
+build/clock1_screen.o : clock1_screen.s \
+			$(COMMON) \
+			clock_defs.s \
+			build/clock1_gfx.bin
+	$(AS) clock1_screen.s $(INCS) -al -o build/clock1_screen.o | $(FORMAT_LIST)
+
+build/clock1_gfx.bin : build/clock1_gfx.o linker_scripts/bin.cmd
+	$(LD) $(LDFLAGS) -M build/clock1_gfx.o -T linker_scripts/bin.cmd -o build/clock1_gfx.bin
 build/clock1_gfx.o : clock1_gfx.s \
 		     build/clock1/clock1.raw \
 		     build/clock1/digits1.raw \
@@ -388,4 +412,67 @@ build/clock1/circle1_right_on_6.raw : gfx/clock1/circle1_right_on_6.bmp
 	$(BMP_TO_RAW) gfx/clock1/circle1_right_on_6.bmp build/clock1/circle1_right_on_6.raw
 build/clock1/circle1_right_on_7.raw : gfx/clock1/circle1_right_on_7.bmp
 	$(BMP_TO_RAW) gfx/clock1/circle1_right_on_7.bmp build/clock1/circle1_right_on_7.raw
+#----------------------------------------------------------------------------}}}
+
+ # build/clock2_screen.bin -----------{{{
+build/clock2_screen.bin.lzsa3 : build/clock2_screen.bin
+	$(LZSA3) build/clock2_screen.bin build/clock2_screen.bin.lzsa3
+
+build/clock2_screen.bin : build/clock2_screen.o \
+			  build/player.o
+	$(LD) $(LDFLAGS) build/clock2_screen.o -R build/player.o -o build/clock2_screen.out
+	$(AOUT2SAV) build/clock2_screen.out -b -s -o build/clock2_screen.bin
+build/clock2_screen.o : clock2_screen.s \
+			$(COMMON) \
+			clock_defs.s \
+			build/clock2/clock2.raw
+	$(AS) clock2_screen.s $(INCS) -al -o build/clock2_screen.o | $(FORMAT_LIST)
+
+build/clock2/clock2.raw : gfx/clock2/clock2.bmp
+	$(BMP_TO_RAW) gfx/clock2/clock2.bmp build/clock2/clock2.raw
+#----------------------------------------------------------------------------}}}
+
+ # build/clock3_screen.bin -----------{{{
+build/clock3_screen.bin.lzsa3 : build/clock3_screen.bin
+	$(LZSA3) build/clock3_screen.bin build/clock3_screen.bin.lzsa3
+
+build/clock3_screen.bin : build/clock3_screen.o \
+			  build/player.o
+	$(LD) $(LDFLAGS) build/clock3_screen.o -R build/player.o -o build/clock3_screen.out
+	$(AOUT2SAV) build/clock3_screen.out -b -s -o build/clock3_screen.bin
+build/clock3_screen.o : clock3_screen.s \
+			$(COMMON) \
+			clock_defs.s \
+			build/clock3/clock3.raw \
+			build/clock3/dangling1.raw \
+			build/clock3/dangling2.raw
+	$(AS) clock3_screen.s $(INCS) -al -o build/clock3_screen.o | $(FORMAT_LIST)
+
+build/clock3/clock3.raw : gfx/clock3/clock3.bmp
+	$(BMP_TO_RAW) gfx/clock3/clock3.bmp build/clock3/clock3.raw
+build/clock3/dangling1.raw : gfx/clock3/dangling1.bmp
+	$(BMP_TO_RAW) gfx/clock3/dangling1.bmp build/clock3/dangling1.raw
+build/clock3/dangling2.raw : gfx/clock3/dangling2.bmp
+	$(BMP_TO_RAW) gfx/clock3/dangling2.bmp build/clock3/dangling2.raw
+#----------------------------------------------------------------------------}}}
+
+ # build/clock4_screen.bin -----------{{{
+build/clock4_screen.bin.lzsa3 : build/clock4_screen.bin
+	$(LZSA3) build/clock4_screen.bin build/clock4_screen.bin.lzsa3
+
+build/clock4_screen.bin : build/clock4_screen.o \
+			  build/player.o
+	$(LD) $(LDFLAGS) build/clock4_screen.o -R build/player.o -o build/clock4_screen.out
+	$(AOUT2SAV) build/clock4_screen.out -b -s -o build/clock4_screen.bin
+build/clock4_screen.o : clock4_screen.s \
+			$(COMMON) \
+			clock_defs.s \
+			build/clock4/clock4.raw \
+			build/clock4/digits.raw
+	$(AS) clock4_screen.s $(INCS) -al -o build/clock4_screen.o | $(FORMAT_LIST)
+
+build/clock4/clock4.raw : gfx/clock4/clock4.bmp
+	$(BMP_TO_RAW) gfx/clock4/clock4.bmp build/clock4/clock4.raw
+build/clock4/digits.raw : gfx/clock4/digits.bmp
+	$(BMP_TO_RAW) gfx/clock4/digits.bmp build/clock4/digits.raw
 #----------------------------------------------------------------------------}}}

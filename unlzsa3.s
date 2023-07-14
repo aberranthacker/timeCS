@@ -1,6 +1,5 @@
 # vim: set tabstop=4 :
 
-
 # optimized LZSA3 decompressor for PDP-011 by Manwe and Ivanq
 # Thanks to Ivan Gorodetsky
 # Usage:
@@ -9,7 +8,6 @@
 # CALL Unpack
 
 #.global Unpack
-
 
 Unpack: CLR  R5          # no nibbles sign
 Token:  MOVB (R1)+,R3    # read token

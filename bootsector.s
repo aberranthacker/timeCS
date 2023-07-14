@@ -1,4 +1,4 @@
-               .list
+               .nolist
 
                .TITLE timeCS bootsector
 

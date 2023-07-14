@@ -11,10 +11,11 @@
 .equiv PPU.PSGP_Player.Init,   6
 .equiv PPU.PSGP_Player.Play,   8
 .equiv PPU.PT3Play.Init,      10
-.equiv PPU.PT3Play.Play,      12
-.equiv PPU.PT3Play.Mute,      14
+.equiv PPU.PT3Play.Mute,      12
+.equiv PPU.PT3Play.Start,     14
+.equiv PPU.PT3Play.Stop,      16
 
-.equiv PPU.LastJMPTableIndex, 14
+.equiv PPU.LastJMPTableIndex, 18
 
 .equiv PPU.SET_FB0_VISIBLE, 0
 .equiv PPU.SET_FB1_VISIBLE, 1
@@ -25,6 +26,11 @@
 .equiv AUX_SCREEN_LINES_COUNT, 288 - MAIN_SCREEN_LINES_COUNT
 .equiv LINE_WIDTHB, 72
 .equiv LINE_WIDTHW, LINE_WIDTHB >> 1
+
+.equiv CLOCK_SCR_WIDTH, 192
+.equiv CLOCK_SCR_WIDTH_BYTES, CLOCK_SCR_WIDTH >> 2
+.equiv CLOCK_SCR_WIDTH_WORDS, CLOCK_SCR_WIDTH >> 3
+.equiv CLOCK_SCR_HEIGHT, 184
 # CPU memory map ---------------------------------------------------------------
 .equiv DUMMY_INTERRUPT_HANDLER, 040 # 32 0x20 loads from bootsector
 .equiv PPUCommandArg, 046 # 38 0x26 command for PPU argument
@@ -62,8 +68,8 @@
 #-------------------------------------------------------------------------------
 # PPU memory map ---------------------------------------------------------------
 .equiv PPU_UserRamStart, 0023666 # 10166 0x27B6
-.equiv PPU_UserRamEnd,   0077771 # 32761 0x7FF9
-.equiv PPU_UserProcessMetadataAddr, 0077772 # 32762 0x7FFA
+.equiv PPU_UserRamEnd,   0077772 # 32762 0x7FFA
+.equiv PPU_UserProcessMetadataAddr, PPU_UserRamSize
 #-end of PPU memory map---------------------------------------------------------
 #-------------------------------------------------------------------------------
 # VRAM memory map --------------------------------------------------------------

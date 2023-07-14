@@ -1,4 +1,4 @@
-       .list
+       .nolist
 
        .title Loader
 
@@ -11,7 +11,6 @@
        .=LOADER_START
 
 start:
-        MTPS $PR0
       # clear screen
         MOV  $FB_SIZE_WORDS + 4,R1
         MOV  $FB0 - 8,R5
