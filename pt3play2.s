@@ -79,7 +79,7 @@ pt3play2.INIT:
         CLR  R5                              # CLR R5 ;GET OFFSET TO SECOND MODULE
         DEC  (R4)
         BISB (R0), R5                        # BISB -(R0), R5
-        SWAB R5
+        SWAB R5                              # SWAB R5
         DEC  (R4)
         BISB (R0), R5                        # BISB -(R0), R5
        .equiv PT3FILE_MODULE1_ADDR, .+2
@@ -146,7 +146,17 @@ INIT_NEXT:
         MOV  $105, R1  # R1: samples offset      # MOV #105., R1
         ADD  R5, R1                              # ADD R5, R1
         MOV  R1, PARAM_SAMPLESPOINTERS(R3)       # MOV R1, PARAM_SAMPLESPOINTERS(R3)
-
+#---
+        MOV $EMPTY_SAM_ORN_TEMPLATE_END,R2
+       .equiv EMPTY_SAM_ORN_TEMPLATE_SIZE, EMPTY_SAM_ORN_TEMPLATE_END - EMPTY_SAM_ORN_TEMPLATE
+        MOV $EMPTY_SAM_ORN_TEMPLATE_SIZE, R1
+        CLR (R4)
+        create_empty_sam_orn_loop:
+            DEC (R4)
+            MOVB -(R2),(R0)
+        SOB R1,create_empty_sam_orn_loop
+        MOV (R4),EMPTY_SAM_ORN
+#---
         PUSH R5 # store PT3FILE_MODULEn_ADDR     # MOV R5, -(SP)
 #---
         MOV  $TABLES_PACK, R4                    # MOV #TABLES_PACK, R4
@@ -184,7 +194,8 @@ INIT_NEXT:
 
         MOVB $1, PARAM_DELAYCOUNTER(R5)          # MOVB #1, PARAM_DELAYCOUNTER(R5)
         MOV $0xF001, R0                          # MOV #0XF001, R0
-        MOV $EMPTY_SAM_ORN, R2                   # MOV #EMPTY_SAM_ORN, R2
+       .equiv EMPTY_SAM_ORN, .+2
+        MOV $0, R2                               # MOV #EMPTY_SAM_ORN, R2
         MOV $PARAM_CHANNEL_A, R4                 # MOV #PARAM_CHANNEL_A, R4
         ADD R5, R4                               # ADD R5, R4
                                                  # MOV (PC)+, R3
@@ -201,11 +212,11 @@ INIT_NEXT:
         MOV  $PBP1DT,R3
         POP  (R4) # restore PT3FILE_MODULEn_ADDR # MOV (SP)+, R5
 
-      # +13 (17) "7" (или "6","5","4", или даже "3" ) - номер подверсии.
+      # +13 (1) "7" (или "6","5","4", или даже "3" ) - номер подверсии.
         ADD $13,(R4)
-        MOVB (R2), R0                            # MOVB 13.(R5), R0
+        MOVB (R3), R0                            # MOVB 13.(R5), R0
         SUB $060, R0                             # SUB #60, R0
-        BCS 4$                                   # BCS 4
+        BLO 4$                                   # BCS 4
 
         CMPB R0, $10                             # CMPB R0, #10.
         BLO 5$                                   # BLO 5
@@ -217,8 +228,8 @@ INIT_NEXT:
         CMPB R0, $4                              # CMPB R0, #4
       # +99 (1) номер частотной таблицы:
       # 0=Pro Tracker (она же 1625000),
-      # 1=Sound Tracker, 2=1750000 (другое название, не соответствующее
-      # содержанию - ASM or PSC),
+      # 1=Sound Tracker,
+      # 2=1750000 (другое название, не соответствующее содержанию - ASM or PSC),
       # 3=RealSound (она же  1625000+, плохая попытка передвинуть табл. 0 под 1.75MHz).
       # Табличка занимает 192 байта и содержит значения делителей частоты для 96 нот, начиная
       # с C-1 (ДО первой октавы).
@@ -228,10 +239,10 @@ INIT_NEXT:
       # Компилятор  PT3 (текущие версии PT3 собираются без компилятора) сохраняет таблицу,
       # соответствующую модулю, в  тело  плейера  по относительному адресу 512.
       # Таблицу громкости он сохраняет в том же теле плейера по относительному адресу 256.
-        ADD $66,(R4)
-        MOVB (R2), R0                            # MOVB 99.(R5), R0
+        ADD $86,(R4)
+        MOVB (R3), R0                            # MOVB 99.(R5), R0
         ROLB R0                                  # ROLB R0
-        BICB $0177770, R0                        # BICB #177770, R0
+        BIC  $0177770, R0                        # BICB #177770, R0
 
 NOTE_TABLE_MAKER:
         PUSH R1                                  # MOV R1, -(SP)
@@ -297,7 +308,7 @@ NOTE_TABLE_MAKER:
         ASLB R0                                  # ASLB R0
         ADD  R0, R2                              # ADD R0, R2
         TST  R5                                  # TST R5
-        BEQ  4$                                  # BEQ 4
+        BZE  4$                                  # BEQ 4
 
         SUB  $2, (R2)                            # SUB #2, (R2)
 4$:     INC  (R2)                                # INC (R2)
@@ -312,7 +323,7 @@ VOL_TABLE_MAKER:
         CMPB R0, $5                              # CMPB R0, #5
         MOV (PC)+, R0                            # MOV (PC)+, R0
         ASLB R0                                  # ASLB R0
-        BHIS 10$                                 # BHIS 0
+        BCC 10$                                  # BHIS 0
 
         DEC R3                                   # DEC R3
         MOV R3, R1                               # MOV R3, R1
@@ -348,7 +359,7 @@ VOL_TABLE_MAKER:
         INC  R2                                  # INC R2
         MOV  R2, R0                              # MOV R2, R0
         BIC  $0177760, R0                        # BIC #177760, R0
-        BNE  3$                                  # BNE 3
+        BNZ  3$                                  # BNE 3
 
         POP  R3                                  # MOV (SP)+, R3
         CMP  R1, $119                            # CMP R1, #119.
@@ -356,7 +367,7 @@ VOL_TABLE_MAKER:
 
         INC R1                                   # INC R1
 4$:     TSTB R2                                  # TSTB R2
-        BNE 2$                                   # BNE 2
+        BNZ 2$                                   # BNE 2
 
         JMP REG_OUT                              # JMP REG_OUT
 
@@ -366,9 +377,9 @@ MULTY_SUBR:
 
 FILL:
         MOV R0, CHP_NOTE_SKIP_COUNTER(R4)        # MOV R0, CHP_NOTE_SKIP_COUNTER(R4)
-        MOV R1, CHP_ADDRESS_IN_PATTERN(R4)       # MOV R2, CHP_ADDRESS_IN_PATTERN(R4)
-        MOV R1, CHP_ORNAMENTPOINTER(R4)          # MOV R2, CHP_ORNAMENTPOINTER(R4)
-        MOV R1, CHP_SAMPLEPOINTER(R4)            # MOV R2, CHP_SAMPLEPOINTER(R4)
+        MOV R2, CHP_ADDRESS_IN_PATTERN(R4)       # MOV R2, CHP_ADDRESS_IN_PATTERN(R4)
+        MOV R2, CHP_ORNAMENTPOINTER(R4)          # MOV R2, CHP_ORNAMENTPOINTER(R4)
+        MOV R2, CHP_SAMPLEPOINTER(R4)            # MOV R2, CHP_SAMPLEPOINTER(R4)
         MOV R3, CHP_TONE_REG(R4)                 # MOV R3, CHP_TONE_REG(R4)
         ADD $CHP, R4                             # ADD #CHP, R4
         RETURN                                   # RET
@@ -398,7 +409,7 @@ PLAY_NEXT:
         CLRB PARAM_AYREGS.AY_MIXER(R4)             # CLRB PARAM_AYREGS + AY_MIXER(R4)
         MOVB $-1, PARAM_AYREGS.AY_ENVELOPETYPE(R4) # MOVB #-1, PARAM_AYREGS + AY_ENVELOPETYPE(R4)
         DECB PARAM_DELAYCOUNTER(R4)                # DECB PARAM_DELAYCOUNTER(R4)
-        BHI 5$                                     # BHI 5
+        BNZ 5$ #                                   # BHI 5
 
         MOV $PARAM_CHANNEL_A, R5                   # MOV #PARAM_CHANNEL_A, R5
         ADD R4, R5                                 # ADD R4, R5
@@ -407,7 +418,6 @@ PLAY_NEXT:
         BNZ 2$                                     # BNE 2
 
         MOV CHP_ADDRESS_IN_PATTERN(R5), (R2)       # MOV CHP_ADDRESS_IN_PATTERN(R5), R3
-        #:bpt
         TSTB (R3)                                  # TSTB (R3)
         BNZ 1$                                     # BNE 1
 
@@ -435,9 +445,10 @@ PLAY_NEXT:
         INC REPETITION_NUMBER                      # INC REPETITION_NUMBER ;Next repeat
 
 10$:    MOV (R2), PARAM_CURRENTPOSITION(R4)        # MOV R0, PARAM_CURRENTPOSITION(R4)
-        BIC $0177400, R1                           # BIC #177400, R1
+        BIC $0xFF00, R1                            # BIC #177400, R1
         ASL R1                                     # ASL R1
-        ADD PARAM_PATTERNSPOINTER(R4), (R2)        # ADD PARAM_PATTERNSPOINTER(R4), R1
+        ADD PARAM_PATTERNSPOINTER(R4), R1          # ADD PARAM_PATTERNSPOINTER(R4), R1
+        MOV R1,(R2)
         MOV PARAM_MODULE_ADDRESS(R4), R1           # MOV PARAM_MODULE_ADDRESS(R4), R2
 
         CLR R0                                     # CLR R3
@@ -488,7 +499,7 @@ PLAY_NEXT:
 3$:     ADD $CHP, R5                               # ADD #CHP, R5
       # R5: PARAM_CHANNEL_C
         DECB CHP_NOTE_SKIP_COUNTER(R5)             # DECB CHP_NOTE_SKIP_COUNTER(R5)
-        BNE 4$                                     # BNE 4
+        BNZ 4$                                     # BNE 4
 
         MOV CHP_ADDRESS_IN_PATTERN(R5), (R2)       # MOV CHP_ADDRESS_IN_PATTERN(R5), R3
         CALL PATTERN_INTERPR                       # CALL PATTERN_INTERPR
@@ -502,7 +513,7 @@ PLAY_NEXT:
         CALL CHANGE_REGS                           # CALL CHANGE_REGS
         CALL CHANGE_REGS                           # CALL CHANGE_REGS
         CALL CHANGE_REGS                           # CALL CHANGE_REGS
-
+      # R1: CUR_PARAMS_ADDR
         MOVB PARAM_NOISE_BASE(R1), R0              # MOVB PARAM_NOISE_BASE(R2), R0
         ADD PARAM_ADDTONOISE(R1), R0               # ADD PARAM_ADDTONOISE(R2), R0
         MOVB R0, PARAM_AYREGS.AY_NOISE(R1)         # MOVB R0, PARAM_AYREGS + AY_NOISE(R2)
@@ -517,10 +528,10 @@ PLAY_NEXT:
         MOV $PARAM_CUR_ENV_DELAY, R0               # MOV #PARAM_CUR_ENV_DELAY, R0
         ADD R1, R0                                 # ADD R2, R0
         TSTB (R0)                                  # TSTB (R0)
-        BEQ REG_OUT                                # BEQ REG_OUT
+        BZE REG_OUT                                # BEQ REG_OUT
 
         DECB (R0)                                  # DECB (R0)
-        BNE REG_OUT                                # BNE REG_OUT
+        BNZ REG_OUT                                # BNE REG_OUT
 
         MOVB PARAM_ENV_DELAY(R1), (R0)             # MOVB PARAM_ENV_DELAY(R2), (R0)
         ADD PARAM_ENV_SLIDE_ADD(R1), PARAM_CUR_ENV_SLIDE(R1) # ADD PARAM_ENV_SLIDE_ADD(R2), PARAM_CUR_ENV_SLIDE(R2)
@@ -576,8 +587,9 @@ PD_SAM:
         SUB $0xD0, R0                              # SUB #0XD0, R0
         ASL R0                                     # ASL R0
 PD_SAM_:
+        MOV (R2), R1 # store current (R2)
+
         ADD PARAM_SAMPLESPOINTERS(R4), R0          # ADD PARAM_SAMPLESPOINTERS(R4), R0
-        MOV (R2), R1
         MOV R0, (R2)
 
         CLR R0                                     # CLR R1
@@ -585,8 +597,9 @@ PD_SAM_:
         INC  (R2)
         SWAB R0                                    # SWAB R1
         BISB (R3), R0                              # BISB (R0), R1
-        MOV R1,(R2)
         SWAB R0                                    # SWAB R1
+
+        MOV R1,(R2)  # restore (R2)
 
         TST R0                                     # TST R1
         BZE 1$                                     # BEQ 0
@@ -629,7 +642,7 @@ PD_ORN:
 PD_ESAM:
         CLRB CHP_ENVELOPE_ENABLED(R5)             # CLRB CHP_ENVELOPE_ENABLED(R5)
         BIC $0xFFF0, R0                           # BIC #0XFFF0, R0
-        BEQ 1$                                    # BEQ 0
+        BZE 1$                                    # BEQ 0
 
         CALL SET_ENVELOPE                         # CALL SET_ENVELOPE
     1$: CLRB CHP_POSITION_IN_ORNAMENT(R5)         # CLRB CHP_POSITION_IN_ORNAMENT(R5)
@@ -638,10 +651,13 @@ PD_ESAM:
         BR  PD_SAM_                               # BR  PD_SAM_
 
 PATTERN_INTERPR:
-      # R3: PARAM_CHANNEL_[A|B|C].CHP_ADDRESS_IN_PATTERN
-      # replaced with:
-      # (R2): PARAM_CHANNEL_[A|B|C].CHP_ADDRESS_IN_PATTERN
-      # (R3): PBP1DT
+      # was 
+      # IN:  R3: PARAM_CHANNEL_[A|B|C].CHP_ADDRESS_IN_PATTERN
+      # now:
+      # IN: 
+      #     R2: PBPADR
+      #     (R2): PARAM_CHANNEL_[A|B|C].CHP_ADDRESS_IN_PATTERN
+      #     R3: PBP1DT
       #
       # R4: CUR_PARAMS_ADDR
       # R5: CUR_PARAMS_ADDR.PARAM_CHANNEL_A
@@ -828,7 +844,7 @@ SUBR_NOP:
         RETURN
 
 SET_ORNAMENT:
-        MOV (R2), R1
+        MOV (R2), R1 # store (R2)
 
         BIC $0xFFF0, R0                           # BIC #0XFFF0, R0
         ASL R0                                    # ASL R0
@@ -843,16 +859,16 @@ SET_ORNAMENT:
         SWAB R0                                   # SWAB R1
 
         TST R0                                    # TST R1
-        BZE 1$                                    # BNE 0
+        BNZ 1$                                    # BNE 0
 
-        MOV $EMPTY_SAM_ORN, R0                    # MOV #EMPTY_SAM_ORN, R1
+        MOV EMPTY_SAM_ORN, R0                     # MOV #EMPTY_SAM_ORN, R1
         BR 2$                                     # BR 1
-
     1$: ADD PARAM_MODULE_ADDRESS(R4), R0          # ADD PARAM_MODULE_ADDRESS(R4), R1
+
     2$: MOV R0, CHP_ORNAMENTPOINTER(R5)           # MOV R1, CHP_ORNAMENTPOINTER(R5)
         CLRB CHP_POSITION_IN_ORNAMENT(R5)         # CLRB CHP_POSITION_IN_ORNAMENT(R5)
 
-        MOV R1, (R2)
+        MOV R1, (R2) # restore (R2)
         RETURN                                    # RET
 
 SPEC_SUBR:  .word   SUBR_NOP
@@ -873,18 +889,24 @@ SPEC_SUBR:  .word   SUBR_NOP
             .word   SUBR_NOP
 
 CHANGE_REGS:
-        CLR R1                                   # CLR R1
+       # IN:  R2: PBPADR
+       #      R3: PBP1DT
+       #      R5: CUR_PARAMS_ADDR.PARAM_CHANNEL_[A|B|C]
+       #
+       # OUT: R1: CUR_PARAMS_ADDR
+       #      R5: CUR_PARAMS_ADDR.PARAM_CHANNEL_[B|C|x]
+       # CORRUPTS: R0, R3, R4
+        CLR ampl_reg                             # CLR R1
         TSTB CHP_ENABLED(R5)                     # TSTB CHP_ENABLED(R5)
         BNZ CHANGE_REGS_NEXT                     # BNE CHANGE_REGS_NEXT
 
 CHANGE_REGS_EXIT:
-        PUSH R2
-
         MOVB CHP_AMPL_REG(R5), R0                # MOVB CHP_AMPL_REG(R5), R0
-        MOV CUR_PARAMS_ADDR, R2                  # MOV CUR_PARAMS_ADDR, R2
-        ADD R2, R0                               # ADD R2, R0
-        MOVB R1, PARAM_AYREGS(R0)                # MOVB R1, PARAM_AYREGS(R0)
-        ASRB PARAM_AYREGS.AY_MIXER(R2)           # ASRB PARAM_AYREGS + AY_MIXER(R2)
+        MOV CUR_PARAMS_ADDR, R1                  # MOV CUR_PARAMS_ADDR, R2
+        ADD R1, R0                               # ADD R2, R0
+       .equiv ampl_reg, .+2
+        MOVB $0, PARAM_AYREGS(R0)                # MOVB R1, PARAM_AYREGS(R0)
+        ASRB PARAM_AYREGS.AY_MIXER(R1)           # ASRB PARAM_AYREGS + AY_MIXER(R2)
         TSTB CHP_CURRENT_ONOFF(R5)               # TSTB CHP_CURRENT_ONOFF(R5)
         BZE 2$                                   # BEQ 1
 
@@ -899,15 +921,14 @@ CHANGE_REGS_EXIT:
     1$: MOVB R0, CHP_CURRENT_ONOFF(R5)           # 0: MOVB R0, CHP_CURRENT_ONOFF(R5)
     2$: ADD $CHP, R5                             # 1: ADD #CHP, R5
 
-        POP R2
         RETURN                                   # RET
 
 CHANGE_REGS_NEXT:
         MOV CHP_ORNAMENTPOINTER(R5), (R2)        # MOV CHP_ORNAMENTPOINTER(R5), R1
         MOVB (R3), R4                            # MOVB (R1)+, R4
         INC (R2)
-        MOVB (R3), R1                            # MOVB (R1)+, R3
       # R3 <-> R1
+        MOVB (R3), R1                            # MOVB (R1)+, R3
         INC (R2)
         MOVB CHP_POSITION_IN_ORNAMENT(R5), R0    # MOVB CHP_POSITION_IN_ORNAMENT(R5), R0
         ADD R0, (R2)                             # ADD R0, R1
@@ -934,10 +955,10 @@ CHANGE_REGS_NEXT:
         MOV CHP_SAMPLEPOINTER(R5), (R2)          # MOV CHP_SAMPLEPOINTER(R5), R1
         MOVB (R3), R4                            # MOVB (R1)+, R4
         INC (R2)
-        MOVB (R3), R1                            # MOVB (R1)+, R3
       # R3 <-> R1
+        MOVB (R3), R1                            # MOVB (R1)+, R3
         INC (R2)
-        MOVB CHP_POSITION_IN_SAMPLE(R5), R0      # MOV CHP_SAMPLEPOINTER(R5), R1
+        MOVB CHP_POSITION_IN_SAMPLE(R5), R0      # MOV CHP_POSITION_IN_SAMPLE(R5), R1
         ADD R0, (R2)                             # ADD R0, R1
         ADD R0, (R2)                             # ADD R0, R1
         ADD R0, (R2)                             # ADD R0, R1
@@ -949,8 +970,8 @@ CHANGE_REGS_NEXT:
         MOVB R4, R0                              # MOVB R4, R0
 3$:     MOVB R0, CHP_POSITION_IN_SAMPLE(R5)      # 3: MOVB R0, CHP_POSITION_IN_SAMPLE(R5)
 
-        MOVB (R3), R1                            # MOVB (R1)+, R3
       # R3 <-> R1
+        MOVB (R3), R1                            # MOVB (R1)+, R3
         INC (R2)
         MOVB (R3), R4                            # MOVB (R1)+, R4
         INC (R2)
@@ -977,7 +998,7 @@ CHANGE_REGS_NEXT:
         ADD R1, R0                               # ADD R1, R2
         BIC $0xF000, R0                          # BIC $0xF000, R2
 
-        PUSH R0  # PUSH 'R2'
+        PUSH R0  # PUSH 'R2' ↑
         MOVB CHP_TONE_REG(R5), R0                # MOVB CHP_TONE_REG(R5), R0
         ADD CUR_PARAMS_ADDR, R0                  # ADD CUR_PARAMS_ADDR, R0
         POP PARAM_AYREGS(R0)                     # MOV R2, PARAM_AYREGS(R0)
@@ -993,7 +1014,7 @@ CHANGE_REGS_NEXT:
         ADD R0, R1                               # ADD R2, R1
         MOV R1, CHP_CURRENT_TON_SLIDING(R5)      # MOV R1, CHP_CURRENT_TON_SLIDING(R5)
         TSTB CHP_SIMPLEGLISS(R5)                 # TSTB CHP_SIMPLEGLISS(R5)
-        BNE 7$                                   # BNE 7
+        BNZ 7$                                   # BNE 7
 
                                                  # MOV CHP_TON_DELTA(R5), R0
         TST R0                                   # TST R2
@@ -1045,7 +1066,8 @@ CHANGE_REGS_NEXT:
         BNZ 13$                                  # BNE 13
 
         BISB CHP_ENVELOPE_ENABLED(R5), R1        # BISB CHP_ENVELOPE_ENABLED(R5), R1
-13$:    MOV (R2), R0                             # MOV R3, R0
+13$:    MOV R1, ampl_reg
+        MOV (R2), R0                             # 13: MOV R3, R0
         ASR R0                                   # ASR R0
         BIC $0xFFE0, R0                          # BIC #0XFFE0, R0
         BIT $0x80, R4                            # BIT #0X80, R4
@@ -1064,8 +1086,8 @@ CHANGE_REGS_NEXT:
         ADD R0, PARAM_ADDTOENVELOPE(R1)          # ADD R0, PARAM_ADDTOENVELOPE(R2)
         BR 17$                                   # BR 17
 
-16$:    MOVB CHP_CURRENT_NOISE_SLIDING(R5), (R2) # 16: MOVB CHP_CURRENT_NOISE_SLIDING(R5), R3
-        ADD (R2), R0                             # ADD R3, R0
+16$:    MOVB CHP_CURRENT_NOISE_SLIDING(R5), R1   # 16: MOVB CHP_CURRENT_NOISE_SLIDING(R5), R3
+        ADD R1, R0                               # ADD R3, R0
         MOV CUR_PARAMS_ADDR, R1                  # MOV CUR_PARAMS_ADDR, R2
         MOV R0, PARAM_ADDTONOISE(R1)             # MOV R0, PARAM_ADDTONOISE(R2)
         BIT $0x20, R4                            # BIT #0X20, R4
@@ -1077,48 +1099,6 @@ CHANGE_REGS_NEXT:
         BIC $0177667, R4                         # BIC #177667, R4
         BISB R4, PARAM_AYREGS.AY_MIXER(R1)       # BISB R4, PARAM_AYREGS.AY_MIXER(R2)
         JMP CHANGE_REGS_EXIT                     # JMP CHANGE_REGS_EXIT
-
-
-            AY_TONA = 0
-            AY_TONB = 2
-            AY_TONC = 4
-            AY_NOISE = 6
-            AY_MIXER = 7
-            AY_AMPLITUDEA = 8
-            AY_AMPLITUDEB = 9
-            AY_AMPLITUDEC = 10
-            AY_ENVELOPE = 11
-            AY_ENVELOPETYPE = 13
-
-
-            CHP_POSITION_IN_ORNAMENT = 0
-            CHP_POSITION_IN_SAMPLE = 1
-            CHP_CURRENT_AMPLITUDE_SLIDING= 2
-            CHP_CURRENT_NOISE_SLIDING = 3
-            CHP_CURRENT_ENVELOPE_SLIDING = 4
-            CHP_CURRENT_TON_SLIDING = 6
-            CHP_TON_ACCUMULATOR = 8
-            CHP_TON_SLIDE_COUNT = 10
-            CHP_CURRENT_ONOFF = 11
-            CHP_ONOFF_DELAY = 12
-            CHP_OFFON_DELAY = 13
-            CHP_ENVELOPE_ENABLED = 14
-            CHP_SIMPLEGLISS = 15
-            CHP_ENABLED = 16
-            CHP_ADDRESS_IN_PATTERN = 18
-            CHP_ORNAMENTPOINTER = 20
-            CHP_SAMPLEPOINTER = 22
-            CHP_SLIDE_TO_NOTE = 24
-            CHP_NOTE = 26
-            CHP_TON_SLIDE_STEP = 28
-            CHP_TON_DELTA = 30
-            CHP_NUMBER_OF_NOTES_TO_SKIP = 32
-            CHP_TON_SLIDE_DELAY = 33
-            CHP_NOTE_SKIP_COUNTER = 34
-            CHP_VOLUME = 35
-            CHP_TONE_REG = 36
-            CHP_AMPL_REG = 37
-            CHP = 38
 
 TABLES:
 
@@ -1145,9 +1125,10 @@ TAB_C_NEW_2:
             .byte 0x1A + 1, 0x20 + 1, 0x24 + 1, 0x28 + 1, 0x2A + 1, 0x3A + 1, 0x4C + 1, 0x5E + 1
             .byte 0xBA + 1, 0xBC + 1, 0xBE + 1, 0
 
-EMPTY_SAM_ORN:
+EMPTY_SAM_ORN_TEMPLATE:
             .byte 0, 1, 0, 0x90, 0, 0
             .even
+EMPTY_SAM_ORN_TEMPLATE_END:
 
 TABLES_PACK:
             .word 0x06EC
@@ -1218,18 +1199,45 @@ NT_DATA:
             .byte   PARAM_TAB_WORK_OLD_3 - PARAM_TAB_WORK, 0, TAB_C_OLD_3 - TABLES
             .even
 
+            AY_TONA = 0
+            AY_TONB = 2
+            AY_TONC = 4
+            AY_NOISE = 6
+            AY_MIXER = 7
+            AY_AMPLITUDEA = 8
+            AY_AMPLITUDEB = 9
+            AY_AMPLITUDEC = 10
+            AY_ENVELOPE = 11
+            AY_ENVELOPETYPE = 13
 
-            PARAM_TAB_WORK = PARAM_VOL_TAB + 16
-            PARAM_TAB_WORK_OLD_1 = PARAM_TAB_WORK
-            PARAM_TAB_WORK_OLD_2 = PARAM_TAB_WORK_OLD_1 + 24
-            PARAM_TAB_WORK_OLD_3 = PARAM_TAB_WORK_OLD_2 + 24
-            PARAM_TAB_WORK_OLD_0 = PARAM_TAB_WORK_OLD_3 + 2
-
-            PARAM_TAB_WORK_NEW_0 = PARAM_TAB_WORK_OLD_0
-            PARAM_TAB_WORK_NEW_1 = PARAM_TAB_WORK_OLD_1
-            PARAM_TAB_WORK_NEW_2 = PARAM_TAB_WORK_NEW_0 + 24
-            PARAM_TAB_WORK_NEW_3 = PARAM_TAB_WORK_OLD_3
-
+            CHP_POSITION_IN_ORNAMENT = 0
+            CHP_POSITION_IN_SAMPLE = 1
+            CHP_CURRENT_AMPLITUDE_SLIDING= 2
+            CHP_CURRENT_NOISE_SLIDING = 3
+            CHP_CURRENT_ENVELOPE_SLIDING = 4
+            CHP_CURRENT_TON_SLIDING = 6
+            CHP_TON_ACCUMULATOR = 8
+            CHP_TON_SLIDE_COUNT = 10
+            CHP_CURRENT_ONOFF = 11
+            CHP_ONOFF_DELAY = 12
+            CHP_OFFON_DELAY = 13
+            CHP_ENVELOPE_ENABLED = 14
+            CHP_SIMPLEGLISS = 15
+            CHP_ENABLED = 16
+            CHP_ADDRESS_IN_PATTERN = 18
+            CHP_ORNAMENTPOINTER = 20
+            CHP_SAMPLEPOINTER = 22
+            CHP_SLIDE_TO_NOTE = 24
+            CHP_NOTE = 26
+            CHP_TON_SLIDE_STEP = 28
+            CHP_TON_DELTA = 30
+            CHP_NUMBER_OF_NOTES_TO_SKIP = 32
+            CHP_TON_SLIDE_DELAY = 33
+            CHP_NOTE_SKIP_COUNTER = 34
+            CHP_VOLUME = 35
+            CHP_TONE_REG = 36
+            CHP_AMPL_REG = 37
+            CHP = 38
 
             PARAM_VERSION =             0
             PARAM_DELAY =               1
@@ -1263,38 +1271,87 @@ NT_DATA:
             PARAM_AYREGS =            PARAM_CHANNEL_C + CHP
 
             PARAM_VOL_TAB =           PARAM_AYREGS
+            PARAM_ENVELOPE_BASE =     PARAM_AYREGS + 14
+            PARAM_TAB_WORK =          PARAM_VOL_TAB + 16
+
+            PARAM_VAR0END =           PARAM_TAB_WORK
+
             PARAM_NOTE_TAB =          PARAM_VOL_TAB + 256
 
             PARAM_SIZE =              PARAM_NOTE_TAB + (96 * 2)
 
-            PARAM_ENVELOPE_BASE =     PARAM_AYREGS + 14
+            PARAM_TAB_WORK_OLD_1 = PARAM_TAB_WORK
+            PARAM_TAB_WORK_OLD_2 = PARAM_TAB_WORK_OLD_1 + 24
+            PARAM_TAB_WORK_OLD_3 = PARAM_TAB_WORK_OLD_2 + 24
+            PARAM_TAB_WORK_OLD_0 = PARAM_TAB_WORK_OLD_3 + 2
 
-            PARAM_VAR0END =           PARAM_TAB_WORK
+            PARAM_TAB_WORK_NEW_0 = PARAM_TAB_WORK_OLD_0
+            PARAM_TAB_WORK_NEW_1 = PARAM_TAB_WORK_OLD_1
+            PARAM_TAB_WORK_NEW_2 = PARAM_TAB_WORK_NEW_0 + 24
+            PARAM_TAB_WORK_NEW_3 = PARAM_TAB_WORK_OLD_3
 
-           .equiv PARAM_AYREGS.AY_AMPLITUDEA, PARAM_AYREGS + AY_AMPLITUDEA
-           .equiv PARAM_AYREGS.AY_AMPLITUDEC, PARAM_AYREGS + AY_AMPLITUDEC
-           .equiv PARAM_AYREGS.AY_MIXER, PARAM_AYREGS + AY_MIXER
+           .equiv PARAM_AYREGS.AY_AMPLITUDEA,   PARAM_AYREGS + AY_AMPLITUDEA
+           .equiv PARAM_AYREGS.AY_AMPLITUDEC,   PARAM_AYREGS + AY_AMPLITUDEC
+           .equiv PARAM_AYREGS.AY_MIXER,        PARAM_AYREGS + AY_MIXER
            .equiv PARAM_AYREGS.AY_ENVELOPETYPE, PARAM_AYREGS + AY_ENVELOPETYPE
-           .equiv PARAM_AYREGS.AY_NOISE, PARAM_AYREGS + AY_NOISE
+           .equiv PARAM_AYREGS.AY_NOISE,        PARAM_AYREGS + AY_NOISE
            .equiv PARAM_AYREGS.AY_ENVELOPE_LSB, PARAM_AYREGS + AY_ENVELOPE
            .equiv PARAM_AYREGS.AY_ENVELOPE_MSB, PARAM_AYREGS + AY_ENVELOPE + 1
 
-           .equiv PARAM_CHANNEL_A.CHP_NOTE_SKIP_COUNTER, PARAM_CHANNEL_A + CHP_NOTE_SKIP_COUNTER
+           .equiv PARAM_CHANNEL_A.CHP_NOTE_SKIP_COUNTER,  PARAM_CHANNEL_A + CHP_NOTE_SKIP_COUNTER
 
            .equiv PARAM_CHANNEL_A.CHP_ADDRESS_IN_PATTERN, PARAM_CHANNEL_A + CHP_ADDRESS_IN_PATTERN
-           .equiv PARAM_CHANNEL_B.CHP_ADDRESS_IN_PATTERN, PARAM_CHANNEL_A + CHP_ADDRESS_IN_PATTERN
-           .equiv PARAM_CHANNEL_C.CHP_ADDRESS_IN_PATTERN, PARAM_CHANNEL_A + CHP_ADDRESS_IN_PATTERN
-
+           .equiv PARAM_CHANNEL_B.CHP_ADDRESS_IN_PATTERN, PARAM_CHANNEL_B + CHP_ADDRESS_IN_PATTERN
+           .equiv PARAM_CHANNEL_C.CHP_ADDRESS_IN_PATTERN, PARAM_CHANNEL_C + CHP_ADDRESS_IN_PATTERN
 
            .equiv AY_AMPLITUDEA_TONEA, AY_AMPLITUDEA << 8 | AY_TONA
            .equiv AY_AMPLITUDEB_TONEB, AY_AMPLITUDEB << 8 | AY_TONB
            .equiv AY_AMPLITUDEC_TONEC, AY_AMPLITUDEC << 8 | AY_TONC
+
+.macro ParamsStruct n
+    PARAM_VERSION\n\():          .byte 0   #    0
+    PARAM_DELAY\n\():            .byte 0   #    1
+    PARAM_ENV_DELAY\n\():        .word 0   #    2
+
+    PARAM_MODULE_ADDRESS\n\():   .word 0   #    4
+    PARAM_SAMPLESPOINTERS\n\():  .word 0   #    6
+    PARAM_ORNAMENTSPOINTERS\n\():.word 0   #  010
+    PARAM_PATTERNSPOINTER\n\():  .word 0   #  012
+    PARAM_LOOPPOSITION\n\():     .word 0   #  014
+    PARAM_CURRENTPOSITION\n\():  .word 0   #  016
+
+PARAM_VAR0START\n\():
+    PARAM_PRNOTE\n\():        .word 0   #     020
+    PARAM_PRSLIDING\n\():     .word 0   #     022
+    PARAM_ADDTOENVELOPE\n\(): .word 0   #     024
+    PARAM_ENV_SLIDE_ADD_LSB\n\():
+    PARAM_ENV_SLIDE_ADD_MSB\n\() = PARAM_ENV_SLIDE_LSB + 1
+    PARAM_ENV_SLIDE_ADD\n\(): .word 0   #     026
+    PARAM_CUR_ENV_SLIDE\n\(): .word 0   #     030
+    PARAM_ADDTONOISE\n\():    .word 0   #     032
+    PARAM_DELAYCOUNTER\n\():  .byte 0   #     034
+    PARAM_CUR_ENV_DELAY\n\(): .byte 0   #     035
+    PARAM_NOISE_BASE\n\():    .word 0   #     036
+
+    PARAM_CHANNEL_A\n\():     .space 38 #     040
+    PARAM_CHANNEL_B\n\():     .space 38 #    0106
+    PARAM_CHANNEL_C\n\():     .space 38 #    0154
+
+    PARAM_VOL_TAB\n\():
+    PARAM_AYREGS\n\():        .space 14 #    0222
+    PARAM_ENVELOPE_BASE\n\(): .word 0   #    0240
+PARAM_VAR0END\n\():
+
+    PARAM_TAB_WORK\n\():      .space 240 #   0242
+    PARAM_NOTE_TAB\n\():      .space 96 * 2 #0622
+.endm
+
 PARAM_DEVICES_AY1:
    #.word 0       # TS_SELECTOR  [0|1]
    #.word 0       # GS_SELECTOR  [0100000|040000]
     .word PSG0    # AY_PORT_AZBK [PSG0|PSG1]
-PARAMETERS_AY1:    .space PARAM_SIZE
+PARAMETERS_AY1: .space PARAM_SIZE
 
 PARAM_DEVICES_AY2:
     .word PSG1    # AY_PORT_AZBK [PSG0|PSG1]
-PARAMETERS_AY2:    .space PARAM_SIZE
+PARAMETERS_AY2: .space PARAM_SIZE
