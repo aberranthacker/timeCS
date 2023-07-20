@@ -1,4 +1,4 @@
-               .nolist
+               .list
 
                .TITLE timeCS bootsector
 
@@ -13,28 +13,28 @@
 
        .=0
         NOP  # Bootable disk marker
-        BR   68$
+        BR   70$
 
-       .=040
-        RTI                 # dummy interrupt handler
-       .=0104
-68$:
+       .=0100
+       .word 0104 # Vblank interrupt handler
+       .word 0200 #
+        RTI
+70$:
       # R0 - contains a drive number
       # R1 - contains CSR
         MOVB R0,@$PS.DeviceNumber
-        MOV  $DUMMY_INTERRUPT_HANDLER,@$0100 # set dummy Vblank int handler
         MOV  $0160000,SP
 
-        CALL @$PrintTitleStr
-
+        CALL PrintTitleStr
       #-------------------------------------------------------------------------
         CALL Channel2Send # load PPU module
-    30$:TSTB @$PS.Status  # check loading status
+        30$:
+            TSTB PS.Status  # check loading status
         BMI  30$
       #-------------------------------------------------------------------------
       # PPU will clear the value after it finishes initialization
-        MOV  $-1,@$PPUCommandArg
-        MOV  $PPUModule_PS,@$ParamsAddr+4
+        MOV  $-1, @$PPUCommandArg
+        MOV  $PPUModule_PS, @$ParamsAddr+4
         CALL PPEXEC # execute the PPU module
 
         WaitForPPUInit:
@@ -42,23 +42,20 @@
         BNZ  WaitForPPUInit
       #-------------------------------------------------------------------------
         MOV  $loader.bin,R0
-        CALL LoadDiskFile.Start
-        CALL LoadDiskFile.WaitForFinish
-      #-------------------------------------------------------------------------
-       #JMP  @$LOADER_START
+        CALL LoadDiskFile
         CALL @$LOADER_START
       #-------------------------------------------------------------------------
-        MOV  $player.bin,R0
-        CALL LoadDiskFile.Start
-        CALL LoadDiskFile.WaitForFinish
-        JMP  @$PLAYER_START
-      #-------------------------------------------------------------------------
-       #MOV  $title.bin,R0
-       #CALL LoadDiskFile.Start
-       #CALL LoadDiskFile.WaitForFinish
-       #JMP  @$TITLE_START
+        MOV  $title.bin,R0
+        CALL LoadDiskFile
+        CALL @$TITLE_START
+        #:bpt
 
-LoadDiskFile.Start: # ----------------------------------------------------------
+      #-------------------------------------------------------------------------
+        MOV  $player.bin,R0
+        CALL LoadDiskFile
+        JMP  @$PLAYER_START
+
+LoadDiskFile: # ----------------------------------------------------------------
         MOV  (R0)+,@$PS.CPU_RAM_Address
         MOV  (R0)+,@$PS.WordsCount
         MOV  (R0),R0 # starting block number
@@ -78,9 +75,8 @@ LoadDiskFile.Start: # ----------------------------------------------------------
         BISB R2,@$PS.DeviceNumber        # head (0, 1)
 
         MOVB $-1,@$PS.Status
-       .ppudo_ensure $PPU.LoadDiskFile,$ParamsStruct
-        RETURN
-LoadDiskFile.WaitForFinish: #---------------------------------------------------
+       .ppudo_ensure $PPU.LoadDiskFile, $ParamsStruct
+
         10$:
             TSTB @$PS.Status
         BMI  10$
@@ -109,12 +105,9 @@ PrintTitleStr:
             MOV  R1, @$TTY.Output.Data
         BR   10$
 1237$:  RETURN
-TitleStr: #---------------------------------------------------------------------
-       .asciz "timeCS is loading..."
-       .even
 #-------------------------------------------------------------------------------
 PPEXEC: #-----------------------------------------------------------------------
-        MOV  $PPUModule_PS,@$ParamsAddr+4
+        MOV  $PPUModule_PS, @$ParamsAddr+4
         CALL Channel2Send                 # => Send request to PPU
                                           # PS.A1 contains address of allocated area
         MOV  $PPU_MODULE_LOADING_ADDR,@$PPUModule_PS.A2   # Arg 2 - addr of mem block in CPUs RAM
@@ -155,15 +148,14 @@ loader.bin:
     .word LOADER_START
     .word 0
     .word 0
-#title.bin:
-#    .word TITLE_START
-#    .word 0
-#    .word 0
+title.bin:
+    .word TITLE_START
+    .word 0
+    .word 0
 player.bin:
     .word PLAYER_START
     .word 0
     .word 0
 #-------------------------------------------------------------------------------
-        .ifdef DEBUG
-    .=0600
-        .endif
+TitleStr: .asciz "loading timeCS"
+#-------------------------------------------------------------------------------

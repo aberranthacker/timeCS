@@ -18,9 +18,9 @@ VblankIntHandler: #----------------------------------------------------------{{{
         MOV  R1,-(SP)
         MOV  R0,-(SP)
 
-       .equiv PLAY_NOW, .+2
-        TST  $0
-        BZE  VblankInt_Finalize
+      #.equiv PLAY_NOW, .+2
+      # TST  $0
+      # BZE  VblankInt_Finalize
 
        .equiv PlayMusicProc, .+2
         CALL @$NULL
@@ -94,14 +94,42 @@ KeyboardIntHadler: #---------------------------------------------------------{{{
 # |  77 | 3F | Ю / @   |          | 176 | 7E | О / } |           |
 # | 105 | 45 | HP      | Shift    | 177 | 7F | 9 / ) |           |
 #-----------------------------------------------------------------}}}
-        MOV  R0,-(SP)
-        MOV  R1,-(SP)
-        MOV  @$PBPADR,-(SP)
+        PUSH R0
+        PUSH R1
+        PUSH @$PBPADR
+
+        MOV  $PPU_KeyboardScanner,@$PBPADR
+
+        MOVB @$KBDATA,R0
+        BMI  key_released
+
+    # key pressed ------------------
+        MOV  $key_presses_scan_codes,R1
+       .rept 5 # number of keymaps
+        CMPB R0,(R1)+
+        BEQ known_key
+        INC R1
+       .endr
+        BR 1237$
+    #--------------------------------
+    key_presses_scan_codes:
+       .byte 0153, KEYMAP_ENTER
+       .byte 0166, KEYMAP_ENTER
+       .byte 0113, KEYMAP_SPACE
+       .byte 0134, KEYMAP_DOWN
+       .byte 0154, KEYMAP_UP
+       .even
+    key_released: #-----------------
+        CLR @$PBP12D
+        BR 1237$
+    #--------------------------------
+    known_key:
+        BISB (R1),@$PBP12D
 
 1237$:
-        MOV  (SP)+,@$PBPADR
-        MOV  (SP)+,R1
-        MOV  (SP)+,R0
+        POP @$PBPADR
+        POP R1
+        POP R0
         RTI
 #----------------------------------------------------------------------------}}}
 
@@ -116,11 +144,9 @@ Channel0In_IntHandler: #-----------------------------------------------------{{{
    .endif
         MOV  $CPU_PPUCommandArg,@$PBPADR
         MOV  @$PBP12D,-(R5)
-        MTPS $PR7
         MOV  @$PCH0ID,-(R5)
        .equiv CommandsQueue_CurrentPosition, .+2
         MOV  R5,$CommandsQueue_Bottom
-        MTPS $PR0
 
         MOV  (SP)+,R5
         MOV  (SP)+,@$PBPADR
@@ -132,7 +158,6 @@ CommandsQueue_Full:
 #----------------------------------------------------------------------------}}}
 
 Channel1In_IntHandler: #-----------------------------------------------------{{{
-        MTPS $PR7
         PUSH R0
         PUSH R4
         PUSH R5
@@ -166,7 +191,6 @@ SetFBAddr:
         POP  R5
         POP  R4
         POP  R0
-        MTPS $PR0
 
         RTI
 #----------------------------------------------------------------------------}}}

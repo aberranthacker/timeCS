@@ -1,10 +1,13 @@
-
 #-------------------------------------------------------------------------------
 #   MUSIC RELEASE 'timeCS' ('CLOCK SCREEN 3') 6-channel (2AY) music only!
 #   BY VLADIMIR 'KUVO' KUTYAKOV/CSI
 #
-#   PLATFORM:       BK-0011M
-#   COMPILER:       PDPy11
+#   CONVERSION FOR Elektronika MS0511 (UKNC)
+#   BY ABERRANTHACKER
+#
+#   SOUND DEVICE:   Aberrant Sound Module
+#   PLATFORM:       Elektronika MS0511
+#   COMPILER:       GNU Assembler
 #-------------------------------------------------------------------------------
         DANGLING_WIDTH_ORIG = 24 >> 2
         DANGLING_WIDTH = DANGLING_WIDTH_ORIG + 2
@@ -27,7 +30,7 @@
         LINE_CENTER_X = 96
         LINE_CENTER_Y = 80
 
-           .list
+           .nolist
 
            .include "hwdefs.s"
            .include "macros.s"
@@ -505,7 +508,6 @@ DANGLING1_GFX:
 DANGLING1_GFX_END:
 DANGLING2_GFX:
         .incbin "build/clock3/dangling2.raw"
-
 
 CLOCK_GFX:
         .incbin "build/clock3/clock3.raw"

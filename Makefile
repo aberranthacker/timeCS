@@ -1,4 +1,3 @@
-AKG_PLAYER_PATH  = ../akg_player
 BIN_UTILS_PATH   = ~/opt/binutils-pdp11/pdp11-dec-aout/bin
 BUILD_TOOLS_PATH = ../aku/uknc/build_tools
 
@@ -15,7 +14,7 @@ UPDATE_DISKMAP = $(BUILD_TOOLS_PATH)/update_disk_map.rb
 MAKEFLAGS += --silent --jobs
 LDFLAGS += --strip-all
 
-INCS = -I../aku/uknc -I$(AKG_PLAYER_PATH)
+INCS = -I../aku/uknc
 
 .SUFFIXES:
 .SUFFIXES: .s .o
@@ -27,7 +26,7 @@ INCS = -I../aku/uknc -I$(AKG_PLAYER_PATH)
 
 COMMON = defs.s ../aku/uknc/hwdefs.s ../aku/uknc/macros.s
 
-all : pre-build build/timeCS.dsk
+all : pre-build dsk/timeCS.dsk
 
 pre-build :
 	mkdir -p build/clock1
@@ -36,44 +35,50 @@ pre-build :
 	mkdir -p build/clock4
 
 clean :
+	rm -f build/*.lst
+	rm -f build/*.o
+	rm -f build/*.bin
+	rm -f build/*.dsk
+
+clean_all:
 	rm -rf build/*
 
 # timeCS.dsk ----------------------------------------------------------------{{{
-build/timeCS.dsk : $(BUILD_DSK) \
-		   $(BUILD_TOOLS_PATH)/dsk_image_constants.rb \
-		   $(UPDATE_DISKMAP) \
-		   dsk_flist \
-		   build/bootsector.bin \
-		   build/ppu_module.bin \
-		   build/loader.bin \
-		   build/title.bin \
-		   build/player.bin \
-		   build/clock1_screen.bin.lzsa3 \
-		   build/clock2_screen.bin.lzsa3 \
-		   build/clock3_screen.bin.lzsa3 \
-		   build/clock4_screen.bin.lzsa3 \
-		   build/song01.pt3.lzsa3 \
-		   build/song02.pt3.lzsa3 \
-		   build/song03.pt3.lzsa3 \
-		   build/song04.pt3.lzsa3 \
-		   build/song05.pt3.lzsa3 \
-		   build/song06.pt3.lzsa3 \
-		   build/song07.pt3.lzsa3 \
-		   build/song08.pt3.lzsa3 \
-		   build/song09.pt3.lzsa3 \
-		   build/song10.pt3.lzsa3 \
-		   build/song11.pt3.lzsa3 \
-		   build/song12.pt3.lzsa3 \
-		   build/song13.pt3.lzsa3 \
-		   build/song14.pt3.lzsa3 \
-		   build/song15.pt3.lzsa3 \
-		   build/song16.pt3.lzsa3 \
-		   build/song17.pt3.lzsa3 \
-		   build/song18.pt3.lzsa3
+dsk/timeCS.dsk : $(BUILD_DSK) \
+		 $(BUILD_TOOLS_PATH)/dsk_image_constants.rb \
+		 $(UPDATE_DISKMAP) \
+		 dsk_flist \
+		 build/bootsector.bin \
+		 build/ppu_module.bin \
+		 build/loader.bin \
+		 build/title.bin \
+		 build/player.bin \
+		 build/clock1_screen.bin.lzsa3 \
+		 build/clock2_screen.bin.lzsa3 \
+		 build/clock3_screen.bin.lzsa3 \
+		 build/clock4_screen.bin.lzsa3 \
+		 build/song01.pt3.lzsa3 \
+		 build/song02.pt3.lzsa3 \
+		 build/song03.pt3.lzsa3 \
+		 build/song04.pt3.lzsa3 \
+		 build/song05.pt3.lzsa3 \
+		 build/song06.pt3.lzsa3 \
+		 build/song07.pt3.lzsa3 \
+		 build/song08.pt3.lzsa3 \
+		 build/song09.pt3.lzsa3 \
+		 build/song10.pt3.lzsa3 \
+		 build/song11.pt3.lzsa3 \
+		 build/song12.pt3.lzsa3 \
+		 build/song13.pt3.lzsa3 \
+		 build/song14.pt3.lzsa3 \
+		 build/song15.pt3.lzsa3 \
+		 build/song16.pt3.lzsa3 \
+		 build/song17.pt3.lzsa3 \
+		 build/song18.pt3.lzsa3
 	$(UPDATE_DISKMAP) dsk_flist build/title.map.txt build/title.bin -e 37264
 	$(UPDATE_DISKMAP) dsk_flist build/player.map.txt build/player.bin -e 37264
 	$(UPDATE_DISKMAP) dsk_flist build/bootsector.map.txt build/bootsector.bin
-	$(BUILD_DSK) dsk_flist build/timeCS.dsk
+	$(BUILD_DSK) dsk_flist dsk/timeCS.dsk
 # timeCS.dsk ----------------------------------------------------------------}}}
 
 # bootsector.bin ------------------------------------------------------------{{{
@@ -129,6 +134,7 @@ build/player.o : $(COMMON) \
                unlzsa3_from_bp.s \
                build/loading.raw \
                build/error.raw \
+               build/mainscr_piece.raw \
                build/mainscr.raw.lzsa \
                build/song_names.raw \
 	       build/song01.pt3.lzsa3 \
@@ -154,6 +160,8 @@ build/mainscr.raw.lzsa : build/mainscr.raw
 	$(LZSA3) build/mainscr.raw build/mainscr.raw.lzsa
 build/mainscr.raw : $(BMP_TO_RAW) gfx/mainscr.bmp
 	$(BMP_TO_RAW) gfx/mainscr.bmp build/mainscr.raw
+build/mainscr_piece.raw : $(BMP_TO_RAW) gfx/mainscr_piece.bmp
+			  $(BMP_TO_RAW) gfx/mainscr_piece.bmp build/mainscr_piece.raw
 build/loading.raw : $(BMP_TO_RAW) gfx/loading.bmp
 	$(BMP_TO_RAW) gfx/loading.bmp build/loading.raw
 build/error.raw : $(BMP_TO_RAW) gfx/error.bmp
@@ -296,7 +304,7 @@ build/clock1_screen.o : clock1_screen.s \
 	$(AS) clock1_screen.s $(INCS) -al -o build/clock1_screen.o | $(FORMAT_LIST)
 
 build/clock1_gfx.bin : build/clock1_gfx.o linker_scripts/bin.cmd
-	$(LD) $(LDFLAGS) -M build/clock1_gfx.o -T linker_scripts/bin.cmd -o build/clock1_gfx.bin
+	$(LD) $(LDFLAGS) build/clock1_gfx.o -T linker_scripts/bin.cmd -o build/clock1_gfx.bin
 build/clock1_gfx.o : clock1_gfx.s \
 		     build/clock1/clock1.raw \
 		     build/clock1/digits1.raw \

@@ -1,10 +1,13 @@
-
 #-------------------------------------------------------------------------------
 #   MUSIC RELEASE 'timeCS' ('CLOCK SCREEN 4') 6-channel (2AY) music only!  
 #   BY VLADIMIR 'KUVO' KUTYAKOV/CSI
 #   
-#   PLATFORM:       BK-0011M
-#   COMPILER:       PDPy11
+#   CONVERSION FOR Elektronika MS0511 (UKNC)
+#   BY ABERRANTHACKER
+#
+#   SOUND DEVICE:   Aberrant Sound Module
+#   PLATFORM:       Elektronika MS0511
+#   COMPILER:       GNU Assembler
 #-------------------------------------------------------------------------------
            .nolist
 

@@ -1,21 +1,23 @@
 #-------------------------------------------------------------------------------
 # Note that the PRESENCE of those variables is tested, NOT their values. -------
-.equiv DEBUG, 1
+#.equiv DEBUG, 1
 .equiv WORD_LINE_NUMBERS, 1
+#.equiv start_from_title, 1
+.equiv start_from_player, 1
 #-------------------------------------------------------------------------------
 .equiv CPU_PPUCommandArg, PPUCommandArg >> 1
 
-.equiv PPU.LoadDiskFile,       0
-.equiv PPU.SetPalette,         2
-.equiv PPU.SetPaletteFB1,      4
-.equiv PPU.PSGP_Player.Init,   6
-.equiv PPU.PSGP_Player.Play,   8
-.equiv PPU.PT3Play.Init,      10
-.equiv PPU.PT3Play.Mute,      12
-.equiv PPU.PT3Play.Start,     14
-.equiv PPU.PT3Play.Stop,      16
+.equiv PPU.LoadDiskFile,      0 << 1
+.equiv PPU.SetPalette,        1 << 1
+.equiv PPU.SetPaletteFB1,     2 << 1
+.equiv PPU.PSGP_Player.Init,  3 << 1
+.equiv PPU.PSGP_Player.Play,  4 << 1
+.equiv PPU.PT3Play.Init,      5 << 1
+.equiv PPU.PT3Play.Mute,      6 << 1
+.equiv PPU.PT3Play.Start,     7 << 1
+.equiv PPU.PT3Play.Stop,      8 << 1
 
-.equiv PPU.LastJMPTableIndex, 18
+.equiv PPU.LastJMPTableIndex, 8 << 1
 
 .equiv PPU.SET_FB0_VISIBLE, 0
 .equiv PPU.SET_FB1_VISIBLE, 1
@@ -35,19 +37,21 @@
 .equiv DUMMY_INTERRUPT_HANDLER, 040 # 32 0x20 loads from bootsector
 .equiv PPUCommandArg, 046 # 38 0x26 command for PPU argument
 
-.equiv CPT3.FRAME_NUMBER,         050 # Incremented by one each time the PLAY entry point is accessed
-.equiv CPT3.PT3FILE_MODULE1_ADDR, 052 # PT3 file address
-.equiv CPT3.PT3FILE_END_ADDR,     054 # Address of end PT3 file
-.equiv CPT3.END_OF_PT3FILE,       056 # CODA. End of PT3 file reached (incremented by one each time)
-.equiv CPT3.NO_REPEAT_MODE,       060 # Play without repeat. Set (not zero) before INIT call.
-.equiv CPT3.REPETITION_NUMBER,    062 # Number of elapsed repetitions after end of PT3 file
+.equiv PT3Params.FRAME_NUMBER,         050 # Incremented by one each time the PLAY entry point is accessed
+.equiv PT3Params.PT3FILE_MODULE1_ADDR, 052 # PT3 file address
+.equiv PT3Params.PT3FILE_END_ADDR,     054 # Address of end PT3 file
+.equiv PT3Params.END_OF_PT3FILE,       056 # CODA. End of PT3 file reached (incremented by one each time)
+.equiv PT3Params.NO_REPEAT_MODE,       060 # Play without repeat. Set (not zero) before INIT call.
+.equiv PT3Params.REPETITION_NUMBER,    062 # Number of elapsed repetitions after end of PT3 file
+.equiv KeyboardScanner,                064
 
-.equiv PPT3.FRAME_NUMBER, CPT3.FRAME_NUMBER >> 1
-.equiv PPT3.PT3FILE_MODULE1_ADDR, CPT3.PT3FILE_MODULE1_ADDR >> 1
-.equiv PPT3.PT3FILE_END_ADDR, CPT3.PT3FILE_END_ADDR >> 1
-.equiv PPT3.END_OF_PT3FILE, CPT3.END_OF_PT3FILE >> 1
-.equiv PPT3.NO_REPEAT_MODE, CPT3.NO_REPEAT_MODE >> 1
-.equiv PPT3.REPETITION_NUMBER, CPT3.REPETITION_NUMBER >> 1
+.equiv PPT3.FRAME_NUMBER, PT3Params.FRAME_NUMBER >> 1
+.equiv PPT3.PT3FILE_MODULE1_ADDR, PT3Params.PT3FILE_MODULE1_ADDR >> 1
+.equiv PPT3.PT3FILE_END_ADDR, PT3Params.PT3FILE_END_ADDR >> 1
+.equiv PPT3.END_OF_PT3FILE, PT3Params.END_OF_PT3FILE >> 1
+.equiv PPT3.NO_REPEAT_MODE, PT3Params.NO_REPEAT_MODE >> 1
+.equiv PPT3.REPETITION_NUMBER, PT3Params.REPETITION_NUMBER >> 1
+.equiv PPU_KeyboardScanner, KeyboardScanner >> 1
 
 .equiv FB_SIZE, MAIN_SCREEN_LINES_COUNT * LINE_WIDTHB
 .equiv FB_SIZE_WORDS, FB_SIZE >> 1
@@ -60,8 +64,8 @@
 .equiv LOADER_START, FB1 + (288 * 164) >> 2 # 044610 18824 0x4988
 .equiv PLAYER_START, FB1 + FB_SIZE
 .equiv TITLE_START,  FB1 + FB_SIZE
-.equiv SONG_PACK_START, 0100000
 # 0160000 57344 0xE000 end of RAM ----------------------------------------------
+.equiv SONG_START, 0100000 # we are using HALT mode RAM as well 😎
 #-------------------------------------------------------------------------------
 .equiv PPU_UserRamSize,  0054104 # 22596 0x5844
 .equiv PPU_UserRamSizeWords, PPU_UserRamSize >> 1 # 0026042 11298 0x2C22
@@ -149,7 +153,7 @@
 
 .equiv setOffscreenColors, 2
 
-.equiv untilLine, -1 << 8
+.equiv untilLine, -1
 .equiv untilEndOfScreen, MAIN_SCREEN_LINES_COUNT + 1
 .equiv endOfScreen, MAIN_SCREEN_LINES_COUNT + 1
 #-------------------------------------------------------------------------------
@@ -157,3 +161,8 @@
 .equiv INC_R0_OPCODE, 0005200
 .equiv DECB_R3_OPCODE, 0105303
 .equiv MOVB_R3_R3_OPCODE, 0110303
+
+.equiv KEYMAP_UP,    0b10000000
+.equiv KEYMAP_DOWN,  0b01000000
+.equiv KEYMAP_SPACE, 0b00100000
+.equiv KEYMAP_ENTER, 0b00010000

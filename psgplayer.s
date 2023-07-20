@@ -65,7 +65,7 @@ MUS_ADDR_NEXT:
         CLR  MUS_STOP_NEED
         BR   MUS_LOOP
 
-1$:     CLR  @$PLAY_NOW
+1$:    #CLR  @$PLAY_NOW
         MOV  $CPU.Title.PLAY_NOW, @$PBPADR
         CLR  @$PBP12D
         JMP  MUS_STOP

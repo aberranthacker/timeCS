@@ -1,13 +1,13 @@
-# vim: set tabstop=4 :
-
 #-------------------------------------------------------------------------------
 #   MUSIC RELEASE 'timeCS' (PART 1 'TITLE') 6-channel (2AY) music only!
 #   BY VLADIMIR 'KUVO' KUTYAKOV/CSI
 #
-#   2AY DEVICES:    AZBK, GryphonSound, TurboSound
-#   PLATFORM:       BK-0011M
-#   COMPILER:       PDPy11
+#   CONVERSION FOR Elektronika MS0511 (UKNC)
+#   BY ABERRANTHACKER
 #
+#   SOUND DEVICE:   Aberrant Sound Module
+#   PLATFORM:       Elektronika MS0511
+#   COMPILER:       GNU Assembler
 #-------------------------------------------------------------------------------
            .nolist
 
@@ -26,7 +26,6 @@
            .=TITLE_START
 start:
 # INIT ----------------------------------------------------------------------{{{
-        MOV  $INITIAL_SP, SP
         MTPS $PR0
 
         CALL PROGRESS_BAR_DISPLAY
@@ -70,7 +69,7 @@ start:
             CLR  (R5)+
            .endr
         SOB  R1,100$
-       .ppudo $PPU.SetPalette, $title_palette
+       .ppudo_ensure $PPU.SetPalette, $title_palette
 
         CALL MOSAIC
 
@@ -105,26 +104,25 @@ PIC_OFFSET_SCRIPT:
 PREP_MAIN_LOOP:
         WAIT
 
-       .ppudo $PPU.PSGP_Player.Init
-        MOV $020, R0
-    1$: WAIT
-        SOB R0, 1$
-       .ppudo $PPU.PSGP_Player.Play
+       .ppudo_ensure $PPU.PSGP_Player.Init
         WAIT
+        WAIT
+       .ppudo_ensure $PPU.PSGP_Player.Play
+        INC Title.PLAY_NOW
 # INIT ----------------------------------------------------------------------}}}
 
 MAIN_LOOP:
         TST Title.PLAY_NOW
-        BNE 10$
+        BNZ 10$
 
    100$:JMP END_OF_PART
 
     10$:CMP FRAME_NUMBER, $9858
         BGE 100$
 
-       #BIT $0100, @$0177716 # is a key was pressed?
-       #BNZ 1$       # no, continue
-       #CLR PLAY_NOW # yes, stop playing
+        TST @$KeyboardScanner # is a key was pressed?
+        BZE 1$                # no, continue
+        CLR Title.PLAY_NOW    # yes, stop playing
 
     1$: CALL DISPLAY_timeCS
         CALL DISPLAY_CLOCK
@@ -486,49 +484,45 @@ CLOCKHANDS_DATA:
 # DISPLAY_CLOCK -------------------------------------------------------------}}}
 
 END_OF_PART: #---------------------------------------------------------------{{{
-        br .
-##             MOV $PALETTES_FOR_CHANGE, BK11_PALETTE_IDX
-##
-##             TST PLAY_NOW
-##             BNE 100$
-##
-##             CALL PSGP_PLAYER + 4 #MUTE
-##
-##        100$:MOV $0240, SCREEN_ADDER + 2
-##             MOV $061, R5
-##             MOV $04400, R4
-##             TST DUMMY2
-##             BNE 10$
-##             MOV $042, R5
-##         10$:MOV R5, R1
-##             MOV R4, CIRCLE_FORMER
-##             CALL DRAW_CIRCLE_OPER
-##             SUB $020, R4
-##             DEC R5
-##             DEC R5
-##             BMI 1$
-##             BNE 10$
-##
-##         1$: MOV $0100000, R0
-##             MOV $040000, R1
-##         2$: ASLB (R0)
-##             CLRB (R0)+
-##             SOB R1, 2$
-##
-##             CALL MOSAIC
-##
-##         3$: TST PLAY_NOW
-##             BNE 3$
-##
-##             CALL PSGP_PLAYER + 4 #MUTE
-##
-##             MTPS $0340
-##            #MOVB $0100 + BK11_PALETTE, @$0177663
-##             MOV $2, @$0102
-##             MOV $0102, @$0100
-##
-##             TRAP 0; .word 06400 #1-7
-##             JMP @$0100000
+        TST Title.PLAY_NOW
+        BNZ 100$
+
+       .ppudo_ensure $PPU.PT3Play.Stop
+       wait
+       wait
+
+   100$:
+  #     MOV $0240, SCREEN_ADDER + 2
+  #     MOV $061, R5
+  #     MOV $04400, R4
+  #     TST DUMMY2
+  #     BNE 10$
+
+  #     MOV $042, R5
+  # 10$:MOV R5, R1
+  #     MOV R4, CIRCLE_FORMER
+  #     CALL DRAW_CIRCLE_OPER
+  #     SUB $020, R4
+  #     DEC R5
+  #     DEC R5
+  #     BMI 1$
+  #     BNE 10$
+
+    1$: MOV $FB1-8, R0
+        MOV $FB_SIZE, R1
+        2$:
+            ASLB (R0)
+            CLRB (R0)+
+        SOB R1, 2$
+
+        CALL MOSAIC
+
+    3$: TST Title.PLAY_NOW
+        BNZ 3$
+
+        MOV $0104,@$0100
+       .ppudo_ensure $PPU.PT3Play.Stop
+        RETURN
 # END_OF_PART ---------------------------------------------------------------}}}
 
 TIKTAK: #--------------------------------------------------------------------{{{
@@ -587,7 +581,7 @@ SetBKPaletteFromR0:
     SwithToFB1:
         MOV  $PPU.SET_FB1_VISIBLE,@$CCH1OD
         MOV  palettes_table(R0),@$PPUCommandArg
-       .ppudo $PPU.SetPaletteFB1
+       .ppudo_ensure $PPU.SetPaletteFB1
        #MOVB R0, @$0177663
 1237$:
         RETURN
@@ -788,27 +782,6 @@ progress_bar_arg:
         pb_arg1: .word 0
         pb_arg2: .word 0
         pb_arg3: .word 0
-
-
-## REMOVE_PROGRESS:
-##            #MOV ACTUAL_PAGES, -(SP)
-##             TRAP 0; .word 017400
-##
-##             MOV R0, -(SP)
-##             MOV R1, -(SP)
-##             MOV $064020, R0
-##             ADD $4, .-2
-##             MOV $4, R1
-##         10$:CLR (R0)+
-##             CLR (R0)+
-##             ADD $074, R0
-##             SOB R1, 10$
-##             MOV (SP)+, R1
-##             MOV (SP)+, R0
-##            #MOV (SP), ACTUAL_PAGES
-##             MOV (SP)+, @$0177716
-##             RETURN
-##
 
 DiskRead_Start: #--------------------------------------------------{{{
         MOVB $010,@$PS.Command # read from disk

@@ -1,4 +1,4 @@
-               .nolist
+               .list
 
                .title Chibi Akumas PPU module
 
@@ -17,6 +17,7 @@
 
 start:
         MTPS $PR7
+        MOV $0100000,SP
       # bit 0 if clear, disables ROM chip in range 0100000..0117777
       #       which allows to enable RW access to RAM in that range
       #       when bit 4 is set as well
@@ -276,12 +277,16 @@ SLTABInit:
         MOV  $SLTAB, @$0272   # use our SLTAB
 
         MOV  $KeyboardIntHadler,@$KBINT
-        MOV  $Channel0In_IntHandler,@$PCH0II
+        MOV  $PCH0II, R0
+        MOV  $Channel0In_IntHandler, (R0)+
+        MOV  $0200, (R0)
       # read from the channel, just in case
         TST  @$PCH0ID
 
-        MOV  $Channel1In_IntHandler,@$PCH1II
-        BIS  $Ch1StateInInt,@$PCHSIS
+        MOV  $PCH1II, R0
+        MOV  $Channel1In_IntHandler, (R0)+
+        MOV  $0200, (R0)
+        BIS  $Ch1StateInInt,@$PCHSIS # enable channel 1 input interrupt
       # read from the channel, just in case
         TST  @$PCH1ID
 
@@ -310,7 +315,9 @@ AberrantSoundModulePresent:
         MOV  R2,@$psgplayer.PSG1
         MOV  $0173362,@$4 # restore back Trap 4 handler
 
-        MOV  $VblankIntHandler,@$0100
+        MOV  $0100, R0
+        MOV  $VblankIntHandler,(R0)+
+        MOV  $0, (R0) # allow to receive interrups while handling Bblank int
       # inform loader that PPU is ready to receive commands
         MOV  $CPU_PPUCommandArg,@$PBPADR
         CLR  @$PBP12D
@@ -323,12 +330,13 @@ Queue_Loop:
         CMP  R5,$CommandsQueue_Bottom
         BEQ  Queue_Loop
 
+#:bpt
         #MTPS $PR7
         MOV  (R5)+,R1
         MOV  (R5)+,R0
         MOV  R5,(R4)
         #MTPS $PR0
-    .ifdef DebugMode
+    .ifdef DEBUG
         CMP  R1,$PPU.LastJMPTableIndex
         BHI  .
     .endif
@@ -559,19 +567,29 @@ psgplayer.Play:
         MOV  $psgplayer.MUS_PLAY,@$PlayMusicProc
         MOV  $CPU.Title.PLAY_NOW, @$PBPADR
         INC  @$PBP12D
-        INC  @$PLAY_NOW
+       #INC  @$PLAY_NOW
         RETURN
-
-pt3play2.Start: 
+pt3play2.Start:
         MOV  $pt3play2.PLAY,@$PlayMusicProc
         RETURN
 pt3play2.Stop:
         MOV  $NULL,@$PlayMusicProc
+        CALL pt3play2.MUTE
         RETURN
 LoadDiskFile: # -------------------------------------------------------------{{{
         MOV  $1,@$VblankInt_SkipMusic
         MOV  R0,@$023200 # set ParamsStruct address for firmware proc to use
+
+       #ASR  R0
+       #MOV  R0, params_struct_address
+
         CALL @$0125030   # firmware proc that handles channel 2
+
+#      .equiv params_struct_address, .+2
+#       MOV $0, @$PBPADR
+#   1$: TSTB @$PBP12D
+#       BMI 1$
+
         CLR  @$VblankInt_SkipMusic
         RETURN
 #----------------------------------------------------------------------------}}}
@@ -579,7 +597,6 @@ NULL:   RETURN
 
        .include "ppu/interrupts_handlers.s"
        .include "psgplayer.s"
-       .include "pt3play2.s"
 
 DummyPSG: .word
 
@@ -587,5 +604,6 @@ CommandsQueue_Top:
        .space 2*2*16
 CommandsQueue_Bottom:
 
+       .include "pt3play2.s"
 end:
        .nolist

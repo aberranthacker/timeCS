@@ -1,11 +1,13 @@
-# vim: set tabstop=4 :
-
 #-------------------------------------------------------------------------------
 #   MUSIC RELEASE 'timeCS' ('CLOCK SCREEN 1') 6-channel (2AY) music only!
 #   BY VLADIMIR 'KUVO' KUTYAKOV/CSI
+#   
+#   CONVERSION FOR Elektronika MS0511 (UKNC)
+#   BY ABERRANTHACKER
 #
-#   PLATFORM:       BK-0011M
-#   COMPILER:       PDPy11
+#   SOUND DEVICE:   Aberrant Sound Module
+#   PLATFORM:       Elektronika MS0511
+#   COMPILER:       GNU Assembler
 #-------------------------------------------------------------------------------
            .nolist
 
@@ -21,20 +23,7 @@
 start:
 START_CLOCK:
         MOV  $CLOCK_GFX, R5
-# 11 868 vs 12 412
-        ADD  4(R5),R5
-        MOV  $FB0,R4
 
-        MOV  $150,R3
-        20$:
-            MOV $20>>2,R2
-            30$:
-                MOV (R5)+,(R4)+
-            SOB R2,30$
-            ADD $LINE_WIDTHB - 20>>1, R4
-        SOB R3,20$
-
-        br 2$
        .equiv first_run, .+2
         TST  $0 # first run?
         BNZ  2$ # no, skip initialization
