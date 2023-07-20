@@ -129,7 +129,8 @@ UnpackFromBP.Extend:
 
         BISB (R1),R0
         INC  (R4)
-        BNE  UnpackFromBP.Ext1
+        TST R0
+        BNZ  UnpackFromBP.Ext1
 
         # unnecessary for short files
         BISB (R1),R0   # read high byte
