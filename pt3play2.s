@@ -12,18 +12,11 @@
 #
 #   PLATFORM:     Elektronika MS 0511
 #   SOUND DEVICE: Aberrant Sound Module
-#
 #   COMPILER:     GNU Assembler
 #---------------------------------------------------------------------
-PLAYER_ENTRY_POINTS:
-                        .word pt3play2.INIT     #+0  First call before playback
-                        .word pt3play2.PLAY     #+2  Main play call for the next position in PT3 file (one quark, one tick)
-                        .word pt3play2.MUTE     #+4  Mute the sound
-
 INTEGRATION_POINTS:
     NO_REPEAT_MODE:       .word 1 #+034 Play without repeat. Set (not zero) before INIT call.
     REPETITION_NUMBER:    .word 0 #+036 Number of elapsed repetitions after end of PT3 file
-
 # INIT ----------------------------------------------------------------------{{{
 TS_ID:
         .ascii "PT3!PT3!02TS"
@@ -38,8 +31,6 @@ TS_ID_CHECK:
         SOB R5, 10$                 # SOB R4, 0
 
 1237$:  RETURN                      # 1: RET
-
-CStateTable:
 
 pt3play2.INIT:
         CLR TS_PRESENT                       # CLR TS_PRESENT
@@ -102,10 +93,10 @@ pt3play2.INIT:
         MOV $PSG1, (R3)+                     # MOV #AY_2_PORT_AZBK, (R3)+
 
 INIT_NEXT:
-      # R4 = PBPADR
-      # R0 = PBP1DT
       # R1 = PT3FILE_MODULEn_ADDR
       # R3 = PARAMETERS_AY[1|2]
+        MOV $PBPADR,R4
+        MOV $PBP1DT,R0
         MOV  R3, CUR_PARAMS_ADDR                 # MOV R3, CUR_PARAMS_ADDR
 
         MOV  R1, PARAM_MODULE_ADDRESS(R3)        # MOV R1, PARAM_MODULE_ADDRESS(R3)
