@@ -308,7 +308,11 @@ build/clock1_gfx.bin : build/clock1_gfx.o linker_scripts/bin.cmd
 build/clock1_gfx.o : clock1_gfx.s \
 		     build/clock1/clock1.raw \
 		     build/clock1/digits1.raw \
+		     build/clock1/digit1_mask.raw \
+		     build/clock1/digits1_shifted.raw \
+		     build/clock1/digit1_shifted_mask.raw \
 		     build/clock1/digits1_2.raw \
+		     build/clock1/digits1_2_shifted.raw \
 		     build/clock1/numbers1.raw \
 		     build/clock1/circle1_left_off_0.raw \
 		     build/clock1/circle1_left_off_1.raw \
@@ -348,8 +352,16 @@ build/clock1/clock1.raw : gfx/clock1/CLOCK1.bmp
 	$(BMP_TO_RAW) gfx/clock1/CLOCK1.bmp build/clock1/clock1.raw
 build/clock1/digits1.raw : gfx/clock1/digits1.bmp
 	$(BMP_TO_RAW) gfx/clock1/digits1.bmp build/clock1/digits1.raw
+build/clock1/digit1_mask.raw : gfx/clock1/digit1_mask.bmp
+	$(BMP_TO_RAW) gfx/clock1/digit1_mask.bmp build/clock1/digit1_mask.raw
+build/clock1/digits1_shifted.raw : gfx/clock1/digits1_shifted.bmp
+	$(BMP_TO_RAW) gfx/clock1/digits1_shifted.bmp build/clock1/digits1_shifted.raw
+build/clock1/digit1_shifted_mask.raw : gfx/clock1/digit1_shifted_mask.bmp
+	$(BMP_TO_RAW) gfx/clock1/digit1_shifted_mask.bmp build/clock1/digit1_shifted_mask.raw
 build/clock1/digits1_2.raw : gfx/clock1/digits1_2.bmp
 	$(BMP_TO_RAW) gfx/clock1/digits1_2.bmp build/clock1/digits1_2.raw
+build/clock1/digits1_2_shifted.raw : gfx/clock1/digits1_2_shifted.bmp
+	$(BMP_TO_RAW) gfx/clock1/digits1_2_shifted.bmp build/clock1/digits1_2_shifted.raw
 build/clock1/numbers1.raw : gfx/clock1/numbers1.bmp
 	$(BMP_TO_RAW) gfx/clock1/numbers1.bmp build/clock1/numbers1.raw
 

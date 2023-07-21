@@ -40,14 +40,22 @@ CATALOGUE:
             .word circle_right_on_6 - CATALOGUE  #+0104
             .word circle_right_on_7 - CATALOGUE  #+0106
 
+            .word digits1_shifted - CATALOGUE    #+0110
+            .word digits2_shifted - CATALOGUE    #+0112
+
 CLOCK1:
             .incbin "build/clock1/clock1.raw"
 
 digits1:
             .incbin "build/clock1/digits1.raw"
 
+digits1_shifted:
+            .incbin "build/clock1/digits1_shifted.raw"
+
 digits2:
             .incbin "build/clock1/digits1_2.raw"
+digits2_shifted:
+            .incbin "build/clock1/digits1_2_shifted.raw"
 
 numbers:
             .incbin "build/clock1/numbers1.raw"
