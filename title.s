@@ -103,12 +103,10 @@ PIC_OFFSET_SCRIPT:
 
 PREP_MAIN_LOOP:
         WAIT
-
        .ppudo_ensure $PPU.PSGP_Player.Init
         WAIT
-        WAIT
        .ppudo_ensure $PPU.PSGP_Player.Play
-        INC Title.PLAY_NOW
+        WAIT
 # INIT ----------------------------------------------------------------------}}}
 
 MAIN_LOOP:
@@ -488,25 +486,23 @@ END_OF_PART: #---------------------------------------------------------------{{{
         BNZ 100$
 
        .ppudo_ensure $PPU.PT3Play.Stop
-       wait
-       wait
 
    100$:
-  #     MOV $0240, SCREEN_ADDER + 2
-  #     MOV $061, R5
-  #     MOV $04400, R4
-  #     TST DUMMY2
-  #     BNE 10$
+        MOV $0240, SCREEN_ADDER + 2
+        MOV $061, R5
+        MOV $LINE_WIDTHB * 36, R4
+        TST DUMMY2
+        BNE 10$
 
-  #     MOV $042, R5
-  # 10$:MOV R5, R1
-  #     MOV R4, CIRCLE_FORMER
-  #     CALL DRAW_CIRCLE_OPER
-  #     SUB $020, R4
-  #     DEC R5
-  #     DEC R5
-  #     BMI 1$
-  #     BNE 10$
+        MOV $042, R5
+    10$:MOV R5, R1
+        MOV R4, CIRCLE_FORMER
+        CALL DRAW_CIRCLE_OPER
+        SUB $020, R4
+        DEC R5
+        DEC R5
+        BMI 1$
+        BNE 10$
 
     1$: MOV $FB1-8, R0
         MOV $FB_SIZE, R1
@@ -520,7 +516,7 @@ END_OF_PART: #---------------------------------------------------------------{{{
     3$: TST Title.PLAY_NOW
         BNZ 3$
 
-        MOV $0104,@$0100
+        MOV $DUMMY_INTERRUPT_HANDLER, @$0100
        .ppudo_ensure $PPU.PT3Play.Stop
         RETURN
 # END_OF_PART ---------------------------------------------------------------}}}

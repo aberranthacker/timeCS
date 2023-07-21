@@ -10,35 +10,33 @@ VblankIntHandler: #----------------------------------------------------------{{{
         TST  $1
         BNZ  VblankInt_MinimalHandler # skip while floppy disk IO in progress
 
-        MOV  @$PBPADR,-(SP)
-        MOV  R5,-(SP)
-        MOV  R4,-(SP)
-        MOV  R3,-(SP)
-        MOV  R2,-(SP)
-        MOV  R1,-(SP)
-        MOV  R0,-(SP)
+        PUSH R5
+        PUSH R4
+        PUSH R3
+        PUSH R2
+        PUSH R1
+        PUSH R0
 
-      #.equiv PLAY_NOW, .+2
-      # TST  $0
-      # BZE  VblankInt_Finalize
+        PUSH @$PBPADR
 
        .equiv PlayMusicProc, .+2
         CALL @$NULL
 
+        POP @$PBPADR
+
 VblankInt_Finalize:
-        MOV  (SP)+,R0
-        MOV  (SP)+,R1
-        MOV  (SP)+,R2
-        MOV  (SP)+,R3
-        MOV  (SP)+,R4
-        MOV  (SP)+,R5
-        MOV  (SP)+,@$PBPADR
+        POP R0
+        POP R1
+        POP R2
+        POP R3
+        POP R4
+        POP R5
 
 VblankInt_MinimalHandler:
       # we do not need firmware interrupt handler except for this small
       # procedure
         TST  @$07130 # is floppy drive spindle rotating?
-        BZE  1237$   # no
+        BZE  1237$   # no, exit
         DEC  @$07130 # decrease spindle rotation counter
         BNZ  1237$   # continue rotation unless the counter reaches zero
         CALL @07132  # stop floppy drive spindle
@@ -96,22 +94,19 @@ KeyboardIntHadler: #---------------------------------------------------------{{{
 #-----------------------------------------------------------------}}}
         PUSH R0
         PUSH R1
-        PUSH @$PBPADR
 
-        MOV  $PPU_KeyboardScanner,@$PBPADR
-
-        MOVB @$KBDATA,R0
+        MOVB @$KBDATA, R0
         BMI  key_released
 
     # key pressed ------------------
         MOV  $key_presses_scan_codes,R1
        .rept 5 # number of keymaps
         CMPB R0,(R1)+
-        BEQ known_key
-        INC R1
+        BEQ  recognized_key
+        INC  R1
        .endr
         BR 1237$
-    #--------------------------------
+
     key_presses_scan_codes:
        .byte 0153, KEYMAP_ENTER
        .byte 0166, KEYMAP_ENTER
@@ -119,77 +114,73 @@ KeyboardIntHadler: #---------------------------------------------------------{{{
        .byte 0134, KEYMAP_DOWN
        .byte 0154, KEYMAP_UP
        .even
-    key_released: #-----------------
-        CLR @$PBP12D
+
+    key_released:
+        PUSH @$PBPADR
+        MOV  $PPU_KeyboardScanner,@$PBPADR
+        CLR  @$PBP12D
+        POP  @$PBPADR
         BR 1237$
-    #--------------------------------
-    known_key:
-        BISB (R1),@$PBP12D
+
+    recognized_key:
+        PUSH @$PBPADR
+        MOV  $PPU_KeyboardScanner, @$PBPADR
+        BISB (R1), @$PBP12D
+        POP  @$PBPADR
 
 1237$:
-        POP @$PBPADR
         POP R1
         POP R0
         RTI
 #----------------------------------------------------------------------------}}}
-
 Channel0In_IntHandler: #-----------------------------------------------------{{{
-        MOV  @$PBPADR,-(SP)
-        MOV  R5,-(SP)
+        PUSH R5
 
-        MOV  @$CommandsQueue_CurrentPosition,R5
-   .ifdef DebugMode
-        CMP  R5,$CommandsQueue_Top
+        MOV @$CommandsQueue_CurrentPosition, R5
+   .ifdef DEBUG
+        CMP R5, $CommandsQueue_Top
         BLOS CommandsQueue_Full
    .endif
-        MOV  $CPU_PPUCommandArg,@$PBPADR
-        MOV  @$PBP12D,-(R5)
-        MOV  @$PCH0ID,-(R5)
+        PUSH @$PBPADR
+        MOV $CPU_PPUCommandArg, @$PBPADR
+        MOV @$PBP12D, -(R5)
+        POP  @$PBPADR
+        MOV @$PCH0ID, -(R5)
        .equiv CommandsQueue_CurrentPosition, .+2
-        MOV  R5,$CommandsQueue_Bottom
+        MOV R5, $CommandsQueue_Bottom
 
-        MOV  (SP)+,R5
-        MOV  (SP)+,@$PBPADR
+        POP  R5
 
         RTI
 CommandsQueue_Full:
         BR   .
-        NOP
 #----------------------------------------------------------------------------}}}
-
 Channel1In_IntHandler: #-----------------------------------------------------{{{
         PUSH R0
-        PUSH R4
-        PUSH R5
-        PUSH @$PBPADR
 
         TSTB @$PCH1ID
-        BZE  ShowFB0
-        BR   ShowFB1
-ShowFB0: #----------------------------------------------------------------------
+        BZE show_FB0
+
+    show_FB1:
+       .equiv FB1_FirstRecAddr, .+2
+        MOV $0,R0
+        BR set_FB_addr
+
+    show_FB0:
        .equiv FB0_FirstRecAddr, .+2
         MOV  $0,R0
-        BR   SetFBAddr
-#-------------------------------------------------------------------------------
-ShowFB1: #----------------------------------------------------------------------
-       .equiv FB1_FirstRecAddr, .+2
-        MOV  $0,R0
-#-------------------------------------------------------------------------------
-SetFBAddr:
-        MOV  $PBP0DT,R4
-        MOV  $PBPADR,R5
 
+    set_FB_addr:
+        PUSH @$PBPADR
        .equiv MainScreenFirstRecAddr, .+2
-        MOV  $0,(R5)
-        BIS  $0b0110,R0
-        MOVB R0,(R4)
-        INC  (R5)
+        MOV $0, @$PBPADR
+        BIS $0b0110, R0
+        MOVB R0, @$PBP0DT
+        INC @$PBPADR
         SWAB R0
-        MOVB R0,(R4)
+        MOVB R0, @$PBP0DT
+        POP @$PBPADR
 
-        POP  @$PBPADR
-        POP  R5
-        POP  R4
         POP  R0
 
         RTI

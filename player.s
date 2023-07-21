@@ -43,7 +43,7 @@
            .=PLAYER_START
 
 start:
-            MOV  $INITIAL_SP,SP
+
 SCREEN_PREP: #---------------------------------------------------------------{{{
             MOV  $MAINSCR_GFX, R2
             MOV  $CBPADR,R4
@@ -82,7 +82,7 @@ SCREEN_PREP: #---------------------------------------------------------------{{{
                 CMP  R2, $10
                 BNE  3$
                .ppudo $PPU.SetPalette, $mainscr_palette
-            3$:
+                3$:
                 TST  (R4)+
             SOB  R2, 1$
 #----------------------------------------------------------------------------}}}
@@ -91,6 +91,9 @@ MAIN_LOOP_PREP:
             CALL SONG_PREP
             CALL DISPLAY_PLAYING_SONG_NAME
             MOV $TIKTAK, @$0100
+           .equiv song_loaded_flag, .+2
+            TST $0
+            BZE MAIN_LOOP
 
            .ppudo $PPU.PT3Play.Start
 MAIN_LOOP:
@@ -128,8 +131,8 @@ MAIN_LOOP:
             MOV R0, previous_keyboard_state
             CLR DISPLAY_PLAYING_SONG_NAME_DELAY_COUNTER
 
-		  	TST SCROLL_OPER
-			BNZ MAIN_LOOP
+            TST SCROLL_OPER
+            BNZ MAIN_LOOP
 
             ASLB R0    # key 'UP'
             BCC 1$
@@ -314,6 +317,7 @@ GET_PLAYING_SONG:
 SONG_PREP: # prepare a song and a clockscreen -------------------------------{{{
            .ppudo $PPU.PT3Play.Stop
             WAIT
+            CLR song_loaded_flag
 
            .equiv LAST_LOADING_ERROR, .+2
             TST  $0
@@ -349,6 +353,7 @@ SONG_PREP: # prepare a song and a clockscreen -------------------------------{{{
 
             MOV  $SONG_START, PT3Params.PT3FILE_MODULE1_ADDR
             MOV  (R4), PT3Params.PT3FILE_END_ADDR
+            MOV PC, song_loaded_flag
            .ppudo $PPU.PT3Play.Init
 
           # prepare clockscreen
@@ -378,6 +383,7 @@ SONG_PREP: # prepare a song and a clockscreen -------------------------------{{{
             CALL DiskIO_WaitForFinish
             BCC  load_clockscreen_success
 
+            CLR ClockScreenStart
             MOV  PC, LAST_LOADING_ERROR
             CALL DISPLAY_ERROR
             RETURN
@@ -750,7 +756,5 @@ MAINSCR_GFX_END:
         .ifdef DEBUG
     .space max_clock_size - mainscr_gfx_size
         .endif
-
-end:
-
 .space 2
+end:

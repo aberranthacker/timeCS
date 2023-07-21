@@ -1,9 +1,7 @@
 #-------------------------------------------------------------------------------
 # Note that the PRESENCE of those variables is tested, NOT their values. -------
-#.equiv DEBUG, 1
+.equiv DEBUG, 1
 .equiv WORD_LINE_NUMBERS, 1
-#.equiv start_from_title, 1
-.equiv start_from_player, 1
 #-------------------------------------------------------------------------------
 .equiv CPU_PPUCommandArg, PPUCommandArg >> 1
 

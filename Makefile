@@ -229,8 +229,8 @@ build/clockhand.raw : $(BMP_TO_RAW) gfx/clockhand.bmp
 
 # title.bin -----------------------------------------------------------------}}}
 
-clock_defs.s : build/player.o clock_start_update.rb
-	./clock_start_update.rb
+clock_defs.s : build/player.o scripts/clock_start_update.rb
+	scripts/clock_start_update.rb
 	touch clock_defs.s
 
 # Songs: --------------------------------------------------------------------{{{

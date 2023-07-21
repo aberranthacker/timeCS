@@ -1,4 +1,4 @@
-               .list
+               .nolist
 
                .title Chibi Akumas PPU module
 
@@ -313,11 +313,14 @@ AberrantSoundModulePresent:
         CLR  @$Trap4Detected
         MOV  R1,@$psgplayer.PSG0
         MOV  R2,@$psgplayer.PSG1
+        MOV  R1,@$pt3play2.PSG0
+        MOV  R2,@$pt3play2.PSG1
         MOV  $0173362,@$4 # restore back Trap 4 handler
 
         MOV  $0100, R0
         MOV  $VblankIntHandler,(R0)+
-        MOV  $0, (R0) # allow to receive interrups while handling Bblank int
+        CLR  (R0) # allows to receive interrups while handling Vblank int
+
       # inform loader that PPU is ready to receive commands
         MOV  $CPU_PPUCommandArg,@$PBPADR
         CLR  @$PBP12D
@@ -330,12 +333,11 @@ Queue_Loop:
         CMP  R5,$CommandsQueue_Bottom
         BEQ  Queue_Loop
 
-#:bpt
-        #MTPS $PR7
+        MTPS $PR7
         MOV  (R5)+,R1
         MOV  (R5)+,R0
         MOV  R5,(R4)
-        #MTPS $PR0
+        MTPS $PR0
     .ifdef DEBUG
         CMP  R1,$PPU.LastJMPTableIndex
         BHI  .
@@ -564,33 +566,24 @@ ClearOffscreenArea: # -------------------------------------------------------{{{
         RETURN
 #----------------------------------------------------------------------------}}}
 psgplayer.Play:
-        MOV  $psgplayer.MUS_PLAY,@$PlayMusicProc
-        MOV  $CPU.Title.PLAY_NOW, @$PBPADR
-        INC  @$PBP12D
-       #INC  @$PLAY_NOW
+        MOV $psgplayer.MUS_PLAY, @$PlayMusicProc
+        MOV $CPU.Title.PLAY_NOW, @$PBPADR
+        INC @$PBP12D
         RETURN
 pt3play2.Start:
-        MOV  $pt3play2.PLAY,@$PlayMusicProc
+        MOV $pt3play2.PLAY, @$PlayMusicProc
         RETURN
 pt3play2.Stop:
-        MOV  $NULL,@$PlayMusicProc
+        MOV $NULL, @$PlayMusicProc
         CALL pt3play2.MUTE
         RETURN
 LoadDiskFile: # -------------------------------------------------------------{{{
-        MOV  $1,@$VblankInt_SkipMusic
-        MOV  R0,@$023200 # set ParamsStruct address for firmware proc to use
+        MOV PC, @$VblankInt_SkipMusic # set the flag to non-zero value
 
-       #ASR  R0
-       #MOV  R0, params_struct_address
-
+        MOV R0, @$023200 # set ParamsStruct address for firmware proc to use
         CALL @$0125030   # firmware proc that handles channel 2
 
-#      .equiv params_struct_address, .+2
-#       MOV $0, @$PBPADR
-#   1$: TSTB @$PBP12D
-#       BMI 1$
-
-        CLR  @$VblankInt_SkipMusic
+        CLR @$VblankInt_SkipMusic # clear the flag
         RETURN
 #----------------------------------------------------------------------------}}}
 NULL:   RETURN

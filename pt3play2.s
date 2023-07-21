@@ -54,6 +54,7 @@ pt3play2.INIT:
         MOV $PARAM_DEVICES_AY1, R3           # MOV #PARAM_DEVICES_AY1, R3
                                              # CLR (R3)+
                                              # MOV #100000, (R3)+
+       .equiv pt3play2.PSG0, .+2
         MOV $PSG0, (R3)+                     # MOV #AY_1_PORT_AZBK, (R3)+
 
       # TS detect
@@ -90,6 +91,7 @@ pt3play2.INIT:
         MOV $PARAM_DEVICES_AY2, R3           # MOV #PARAM_DEVICES_AY2, R3
                                              # MOV #1, (R3)+
                                              # MOV #40000, (R3)+
+       .equiv pt3play2.PSG1, .+2
         MOV $PSG1, (R3)+                     # MOV #AY_2_PORT_AZBK, (R3)+
 
 INIT_NEXT:

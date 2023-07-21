@@ -1,4 +1,4 @@
-               .list
+               .nolist
 
                .TITLE timeCS bootsector
 
@@ -9,17 +9,21 @@
                .global loader.bin
                .global player.bin
                .global title.bin
+
                .equiv PPU_MODULE_LOADING_ADDR, 0100000
 
        .=0
         NOP  # Bootable disk marker
-        BR   70$
+        BR 68$
+
+       .=DUMMY_INTERRUPT_HANDLER
+        RTI
 
        .=0100
-       .word 0104 # Vblank interrupt handler
+       .word DUMMY_INTERRUPT_HANDLER # Vblank interrupt handler
        .word 0200 #
-        RTI
-70$:
+
+68$:
       # R0 - contains a drive number
       # R1 - contains CSR
         MOVB R0,@$PS.DeviceNumber
@@ -48,8 +52,6 @@
         MOV  $title.bin,R0
         CALL LoadDiskFile
         CALL @$TITLE_START
-        #:bpt
-
       #-------------------------------------------------------------------------
         MOV  $player.bin,R0
         CALL LoadDiskFile
@@ -159,3 +161,4 @@ player.bin:
 #-------------------------------------------------------------------------------
 TitleStr: .asciz "loading timeCS"
 #-------------------------------------------------------------------------------
+    .=0600

@@ -415,5 +415,4 @@ DISPLAY_DIGIT1_GFX_SHIFTED:
 
 CLOCK_GFX:
         .incbin "build/clock1_gfx.bin"
-       #.include "clock1_gfx.s"
         .even
