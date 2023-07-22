@@ -201,7 +201,7 @@ DRAW_CIRCLE:
             MOV  R3, R5
     CIRCLE_LOOP:
            .equiv CIRCLE_FORMER, .+2
-            SUB  $LINE_WIDTHB * 36, R4
+            SUB  $LINE_WIDTHB * 36, R4 # 04400
             ADD  R4, R3
             BCS  10$
 
@@ -246,24 +246,25 @@ DRAW_DOT:
             ADD  R2, R3
             ASR  R3
 
-           .equiv SCREEN_ADDER, .+2 # will be changed by END_OF_PART
-            ADD  $FB0 + LINE_WIDTHB * 8, R3
-            BR   10$ # will be replaced with NOP by END_OF_PART
+            ADD  $FB0 + LINE_WIDTHB * 8, R3 # 041000
+    SCREEN_ADDER:
+            BR   1$ # will be replaced with NOP by END_OF_PART
 
-            MOV  FB0(R3), (R3)
+            MOV  FB_SIZE + FIRST_LINE_OFFSET(R3), (R3)
            .set offset, LINE_WIDTHB * 2
-            MOV  FB0 + offset(R3), offset(R3)
-            MOV  FB0 - offset(R3), -offset(R3)
-            MOV  FB0 + 2(R3), 2(R3)
+            MOV  FB_SIZE + FIRST_LINE_OFFSET + offset(R3), offset(R3)
+            MOV  FB_SIZE + FIRST_LINE_OFFSET - offset(R3), -offset(R3)
+            MOV  FB_SIZE + FIRST_LINE_OFFSET + 2(R3), 2(R3)
             BR   DRAW_DOT_EXIT
 
-        10$:BIC  $0177770, R2
+        1$: BIC  $0177770, R2
             ASL  R2
 
            .equiv DOTS_ADDR_PLUS_OFFSET, .+2
             MOV  DOTS(R2), R2
             XOR  R2, (R3)
             XOR  R2, 2(R3)
+
     DRAW_DOT_EXIT:
             POP  R3
             RETURN
@@ -488,9 +489,9 @@ END_OF_PART: #---------------------------------------------------------------{{{
        .ppudo_ensure $PPU.PT3Play.Stop
 
    100$:
-        MOV $0240, SCREEN_ADDER + 2
+        MOV $NOP_OPCODE, SCREEN_ADDER
         MOV $061, R5
-        MOV $LINE_WIDTHB * 36, R4
+        MOV $LINE_WIDTHB * 36, R4 # 04400
         TST DUMMY2
         BNE 10$
 
@@ -504,7 +505,8 @@ END_OF_PART: #---------------------------------------------------------------{{{
         BMI 1$
         BNE 10$
 
-    1$: MOV $FB1-8, R0
+    1$:
+        MOV $FB1, R0
         MOV $FB_SIZE, R1
         2$:
             ASLB (R0)
@@ -554,7 +556,7 @@ TIKTAK: #--------------------------------------------------------------------{{{
         BR   1$
 
     2$: MOV  R1, BK11_PALETTE_IDX
-        
+
         CALL SetBKPaletteFromR0
 
     TIKTAK_EXIT:
@@ -747,7 +749,7 @@ PROGRESS_BAR_DISPLAY:
             PUSH R0
             MOV  R1, R3 # R1 - number of elements to draw
             CLR  R5
-            1$: 
+            1$:
                #TST  R5
                 BPL  2$
                 BIS  $0x0070,(R0)+
