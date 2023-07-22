@@ -22,10 +22,12 @@
 
 start:
 START_CLOCK:
+       .equiv first_run_flag, .+2
         TST $0
-        BNE CLOCK_OPER
-        INC .-4
+        BNZ CLOCK_OPER
+        INC first_run_flag
 
+       .ppudo_ensure $PPU.SetPalette, $clock4_palette
         MOV $FB0, R0
         MOV $CLOCK_GFX, R1
         MOV $CLOCK_SCR_HEIGHT, R2
@@ -112,10 +114,9 @@ DIGITS_LOCATION:
 clock4_palette: #---------------------------------------------------------------
     .word      0, setCursorScalePalette, cursorGraphic, scale320 | RGb
     .word      1, setColors; .byte Black, brRed, brGreen, brCyan
-    .word     83, setColors; .byte Black, brRed, brRed, brCyan
-    .word    104, setColors; .byte Black, brRed, brGreen, brCyan
-    .word    184, setCursorScalePalette, cursorGraphic, scale320 | RGB
-    .word    236, setCursorScalePalette, cursorGraphic, scale320 | rGb
+    .word    184, setColors; .byte Black, brRed, brGreen, White
+    .word    185, setCursorScalePalette, cursorGraphic, scale320 | RGB
+    .word    198, setCursorScalePalette, cursorGraphic, scale320 | rGb
     .word untilEndOfScreen
 #-------------------------------------------------------------------------------
 

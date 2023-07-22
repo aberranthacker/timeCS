@@ -43,10 +43,12 @@
 
 start:
 START_CLOCK:
+       .equiv first_run_flag, .+2
         TST $0
-        BNE CLOCK_OPER
-        INC .-4
+        BNZ CLOCK_OPER
+        INC first_run_flag
 
+       .ppudo_ensure $PPU.SetPalette, $mainscr_palette
     PREP_SCREEN_BUFFER_DISPLAY:
         offset = (184*LINE_WIDTHB) - (LINE_WIDTHB - CLOCK_SCR_WIDTH_BYTES)
         MOV $FB0 + offset, R0

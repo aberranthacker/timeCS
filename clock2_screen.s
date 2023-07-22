@@ -22,11 +22,12 @@
 
 start:
 START_CLOCK:
+       .equiv first_run_flag, .+2
         TST $0
-        BNE 2$
+        BNZ 2$
+        INC first_run_flag
 
-        MOV PC, .-4
-
+       .ppudo_ensure $PPU.SetPalette, $mainscr_palette
         MOV $FB0, R0
         MOV $CLOCK_GFX, R1
         MOV $CLOCK_SCR_HEIGHT, R2

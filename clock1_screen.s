@@ -28,12 +28,12 @@ start:
 START_CLOCK:
         MOV  $CLOCK_GFX, R5
 
-       .equiv first_run, .+2
-        TST  $0 # first run?
-        BNZ  2$ # no, skip initialization
+       .equiv first_run_flag, .+2
+        TST $0
+        BNZ 2$
+        INC first_run_flag
 
-        MOV  PC, first_run # yes, skip initialization next time
-
+       .ppudo_ensure $PPU.SetPalette, $mainscr_palette
         MOV  $FB0, R0
         MOV  R5, R1
         ADD  (R5), R1

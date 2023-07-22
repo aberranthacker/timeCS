@@ -39,6 +39,7 @@
            .global song16.pt3.lzsa3
            .global song17.pt3.lzsa3
            .global song18.pt3.lzsa3
+           .global mainscr_palette
 
            .=PLAYER_START
 
@@ -734,7 +735,7 @@ clock4_screen.bin.lzsa3:
     .word 0
 #----------------------------------------------------------------------------}}}
 mainscr_palette: #--------------------------------------------------------------
-    .word      0, setCursorScalePalette, cursorGraphic, scale320 | RGb
+    .word      0, setCursorScalePalette, cursorGraphic, scale320 | RGB
     .word      1, setColors; .byte Black, brRed, brGreen, brCyan
     .word    184, setColors; .byte Black, brRed, brGreen, White
     .word    185, setCursorScalePalette, cursorGraphic, scale320 | RGB
