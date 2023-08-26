@@ -1,3 +1,6 @@
 [submodule "build_tools"]
 	path = build_tools
 	url = git@github.com:aberranthacker/ms0511_build_tools.git
+[submodule "common"]
+	path = common
+	url = git@github.com:aberranthacker/ms0511_common.git

@@ -14,7 +14,7 @@ UPDATE_DISKMAP = $(BUILD_TOOLS_PATH)/update_disk_map.rb
 MAKEFLAGS += --silent --jobs
 LDFLAGS += --strip-all
 
-INCS = -I../aku/uknc
+INCS = -I./common
 
 .SUFFIXES:
 .SUFFIXES: .s .o
@@ -24,7 +24,7 @@ INCS = -I../aku/uknc
 # --print-map -M
 # --strip-all -s
 
-COMMON = defs.s ../aku/uknc/hwdefs.s ../aku/uknc/macros.s
+COMMON = defs.s ./common/hwdefs.s ./common/macros.s
 
 all : pre-build dsk/timeCS.dsk
 
