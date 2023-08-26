@@ -1,5 +1,5 @@
 BIN_UTILS_PATH   = ~/opt/binutils-pdp11/pdp11-dec-aout/bin
-BUILD_TOOLS_PATH = ../aku/uknc/build_tools
+BUILD_TOOLS_PATH = ./build_tools
 
 AS = $(BIN_UTILS_PATH)/as
 LD = $(BIN_UTILS_PATH)/ld
@@ -18,7 +18,7 @@ INCS = -I../aku/uknc
 
 .SUFFIXES:
 .SUFFIXES: .s .o
-.PHONY: clean
+.PHONY: clean clean_all
 
 # --just-symbols= -R include only symbols from the file
 # --print-map -M
