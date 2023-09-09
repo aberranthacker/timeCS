@@ -241,7 +241,6 @@ INDICATOR_BAR_LOCATION:             .word 0
 GFX_ON_INDICATOR_OFFSET:            .word 0
 GFX_OFF_INDICATOR_OFFSET_FROM_ON:   .word 0
 
-center_8_16: .word 0xF0F0, 0x0F0F # 0   8->16 center
 west_12_16:  .word 0xFFFF, 0x0F0F # 2  12->16 east
 east_12_16:  .word 0xF0F0, 0xFFFF # 4  12->16 west
 east_4_8:    .word 0xF0F0         # 6   4-> 8 west

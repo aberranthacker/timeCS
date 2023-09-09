@@ -6,16 +6,17 @@
 .equiv CPU_PPUCommandArg, PPUCommandArg >> 1
 
 .equiv PPU.LoadDiskFile,      0 << 1
-.equiv PPU.SetPalette,        1 << 1
-.equiv PPU.SetPaletteFB1,     2 << 1
-.equiv PPU.PSGP_Player.Init,  3 << 1
-.equiv PPU.PSGP_Player.Play,  4 << 1
-.equiv PPU.PT3Play.Init,      5 << 1
-.equiv PPU.PT3Play.Mute,      6 << 1
-.equiv PPU.PT3Play.Start,     7 << 1
-.equiv PPU.PT3Play.Stop,      8 << 1
+.equiv PPU.RestoreVblankInt,  1 << 1
+.equiv PPU.SetPalette,        2 << 1
+.equiv PPU.SetPaletteFB1,     3 << 1
+.equiv PPU.PSGP_Player.Init,  4 << 1
+.equiv PPU.PSGP_Player.Play,  5 << 1
+.equiv PPU.PT3Play.Init,      6 << 1
+.equiv PPU.PT3Play.Mute,      7 << 1
+.equiv PPU.PT3Play.Start,     8 << 1
+.equiv PPU.PT3Play.Stop,      9 << 1
 
-.equiv PPU.LastJMPTableIndex, 8 << 1
+.equiv PPU.LastJMPTableIndex, 9 << 1
 
 .equiv PPU.SET_FB0_VISIBLE, 0
 .equiv PPU.SET_FB1_VISIBLE, 1
@@ -64,7 +65,7 @@
 .equiv PLAYER_START, FB1 + FB_SIZE
 .equiv TITLE_START,  FB1 + FB_SIZE
 # 0160000 57344 0xE000 end of RAM ----------------------------------------------
-.equiv SONG_START, 0100000 # we are using HALT mode RAM as well 😎
+.equiv SONG_START, 0100000 # we are (not) using HALT mode RAM as well 😎
 #-------------------------------------------------------------------------------
 .equiv PPU_UserRamSize,  0054104 # 22596 0x5844
 .equiv PPU_UserRamSizeWords, PPU_UserRamSize >> 1 # 0026042 11298 0x2C22

@@ -82,7 +82,7 @@ SCREEN_PREP: #---------------------------------------------------------------{{{
 
                 CMP  R2, $10
                 BNE  3$
-               .ppudo $PPU.SetPalette, $mainscr_palette
+               .ppudo_ensure $PPU.SetPalette, $mainscr_palette
                 3$:
                 TST  (R4)+
             SOB  R2, 1$
@@ -96,7 +96,7 @@ MAIN_LOOP_PREP:
             TST $0
             BZE MAIN_LOOP
 
-           .ppudo $PPU.PT3Play.Start
+           .ppudo_ensure $PPU.PT3Play.Start
 MAIN_LOOP:
             TST  ClockScreenStart
             BZE  skip_clock_screen_call
@@ -316,7 +316,7 @@ GET_PLAYING_SONG:
         1$: RETURN
 
 SONG_PREP: # prepare a song and a clockscreen -------------------------------{{{
-           .ppudo $PPU.PT3Play.Stop
+           .ppudo_ensure $PPU.PT3Play.Stop
             WAIT
             CLR song_loaded_flag
 
@@ -629,7 +629,8 @@ DiskIO_WaitForFinish: #--------------------------------------------{{{
       # +------------------------------------------------------+
         SEC  # set carry flag to indicate that there was an error
 
-1237$:  RETURN
+1237$: .ppudo_ensure $PPU.RestoreVblankInt
+        RETURN
 # DiskIO_WaitForFinish #-------------------------------------------}}}
 ParamsStruct:
     PS.Status:          .byte -1  # operation status code

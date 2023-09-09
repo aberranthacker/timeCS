@@ -278,6 +278,7 @@ SLTABInit:
 
         MOV  $KeyboardIntHadler,@$KBINT
         MOV  $PCH0II, R0
+
         MOV  $Channel0In_IntHandler, (R0)+
         MOV  $0200, (R0)
       # read from the channel, just in case
@@ -348,6 +349,7 @@ Queue_Loop:
 #-------------------------------------------------------------------------------
 CommandVectors:
        .word LoadDiskFile
+       .word RestoreVblankInt
        .word SetPalette            # PPU.SetPalette
        .word SetPaletteFB1         # PPU.SetPalette
        .word psgplayer.MUS_INIT
@@ -578,14 +580,17 @@ pt3play2.Stop:
         CALL pt3play2.MUTE
         RETURN
 LoadDiskFile: # -------------------------------------------------------------{{{
-        MOV PC, @$VblankInt_SkipMusic # set the flag to non-zero value
+        MOV $PPU.DummyInterruptHandler, @$0100 #
 
         MOV R0, @$023200 # set ParamsStruct address for firmware proc to use
         CALL @$0125030   # firmware proc that handles channel 2
 
-        CLR @$VblankInt_SkipMusic # clear the flag
         RETURN
 #----------------------------------------------------------------------------}}}
+RestoreVblankInt:
+        MOV $VblankIntHandler, @$0100
+        RETURN
+
 NULL:   RETURN
 
        .include "ppu/interrupts_handlers.s"

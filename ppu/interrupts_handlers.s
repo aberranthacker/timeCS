@@ -1,4 +1,4 @@
-DummyInterruptHandler: #-------------------------------------------------------
+PPU.DummyInterruptHandler: #----------------------------------------------------
         RTI
 
 Trap4: .equiv Trap4Detected, .+4
@@ -6,10 +6,6 @@ Trap4: .equiv Trap4Detected, .+4
         RTI
 
 VblankIntHandler: #----------------------------------------------------------{{{
-       .equiv VblankInt_SkipMusic, .+2
-        TST  $1
-        BNZ  VblankInt_MinimalHandler # skip while floppy disk IO in progress
-
         PUSH R5
         PUSH R4
         PUSH R3
@@ -32,7 +28,6 @@ VblankInt_Finalize:
         POP R4
         POP R5
 
-VblankInt_MinimalHandler:
       # we do not need firmware interrupt handler except for this small
       # procedure
         TST  @$07130 # is floppy drive spindle rotating?

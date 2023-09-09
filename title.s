@@ -519,6 +519,7 @@ END_OF_PART: #---------------------------------------------------------------{{{
         BNZ 3$
 
         MOV $DUMMY_INTERRUPT_HANDLER, @$0100
+        MOV  $PPU.SET_FB0_VISIBLE,@$CCH1OD
        .ppudo_ensure $PPU.PT3Play.Stop
         RETURN
 # END_OF_PART ---------------------------------------------------------------}}}
@@ -609,8 +610,11 @@ palettes_table:
     .word palette_015
     .word palette_016
 
-palette_01:
+palette_00:
     .word      1, setColors; .byte Black, brBlue, brGreen, brRed
+    .word untilEndOfScreen
+palette_01:
+    .word      1, setColors; .byte Black, brYellow, brMagenta, brRed
     .word untilEndOfScreen
 palette_02:
     .word      1, setColors; .byte Black, brCyan, brBlue, brMagenta
@@ -630,6 +634,18 @@ palette_06:
 palette_07:
     .word      1, setColors; .byte Black, brGreen, brGreen, brGreen
     .word untilEndOfScreen
+palette_010:
+    .word      1, setColors; .byte Black, brMagenta, brMagenta, brMagenta
+    .word untilEndOfScreen
+palette_011:
+    .word      1, setColors; .byte Black, brGreen, brMagenta, brRed
+    .word untilEndOfScreen
+palette_012:
+    .word      1, setColors; .byte Black, brGreen, brMagenta, brRed
+    .word untilEndOfScreen
+palette_013:
+    .word      1, setColors; .byte Black, brCyan, brYellow, brRed
+    .word untilEndOfScreen
 palette_014:
     .word      1, setColors; .byte Black, brRed, brGreen, brCyan
     .word untilEndOfScreen
@@ -638,6 +654,9 @@ palette_015:
     .word untilEndOfScreen
 palette_016:
     .word      1, setColors; .byte Black, brYellow, brGreen, White
+    .word untilEndOfScreen
+palette_017:
+    .word      1, setColors; .byte Black, brCyan, brGreen, White
     .word untilEndOfScreen
 
 # Creates three sets of 2-bit sprites from a set of 1-bit sprites
@@ -835,7 +854,8 @@ DiskIO_WaitForFinish: #--------------------------------------------{{{
       # +------------------------------------------------------+
         SEC  # set carry flag to indicate that there was an error
 
-1237$:  RETURN
+1237$: .ppudo_ensure $PPU.RestoreVblankInt
+        RETURN
 # DiskIO_WaitForFinish #-------------------------------------------}}}
 ParamsStruct:
     PS.Status:          .byte -1  # operation status code
