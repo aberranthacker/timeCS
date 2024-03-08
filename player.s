@@ -337,8 +337,7 @@ SONG_PREP: # prepare a song and a clockscreen -------------------------------{{{
             MUL  $6, R1
             ADD  $Songs, R1 # calculete song file parameters address
             MOV  R1, R0
-            CALL DiskRead_Start
-            CALL DiskIO_WaitForFinish
+            CALL LoadDiskFile
             BCC  load_song_success
 
             MOV  PC, LAST_LOADING_ERROR
@@ -380,8 +379,7 @@ SONG_PREP: # prepare a song and a clockscreen -------------------------------{{{
 
         11$:
             MOV 4(R5),R0
-            CALL DiskRead_Start
-            CALL DiskIO_WaitForFinish
+            CALL LoadDiskFile
             BCC  load_clockscreen_success
 
             CLR ClockScreenStart
@@ -576,70 +574,6 @@ GFX_TRACK_NAMES:
 SONG_NAME_BUFFER1: .space 6 * 16
 SONG_NAME_BUFFER2: .space 6 * 16
 
-DiskRead_Start: #--------------------------------------------------{{{
-        MOVB $010,@$PS.Command # read from disk
-DiskIO_Start:
-        MOV  (R0)+,@$PS.CPU_RAM_Address
-        MOV  (R0)+,@$PS.WordsCount
-        MOV  (R0),R0 # starting block number
-      # calculate location of a file on a disk from the starting block number
-        CLR  R2      # R2 - most significant word
-        MOV  R0,R3   # R3 - least significant word
-        DIV  $20,R2  # quotient -> R2, remainder -> R3
-        MOVB R2,@$PS.AddressOnDevice     # track number (0-79)
-
-        CLR  R2
-        DIV  $10,R2
-        INC  R3
-        MOVB R3,@$PS.AddressOnDevice + 1 # sector (1-10)
-
-        ASH  $7,R2
-        BICB $0x80,@$PS.DeviceNumber     # BICB/BISB to preserve drive number
-        BISB R2,@$PS.DeviceNumber        # head (0, 1)
-
-        MOVB $-1,@$PS.Status
-
-       .ppudo $PPU.LoadDiskFile,$ParamsStruct
-        RETURN
-# DiskRead_Start #-------------------------------------------------}}}
-DiskIO_WaitForFinish: #--------------------------------------------{{{
-        CLC
-        MOVB @$PS.Status,R0
-        BMI  DiskIO_WaitForFinish
-        BZE  1237$
-      # +------------------------------------------------------+
-      # | Код ответа |  Значение                               |
-      # +------------+-----------------------------------------+
-      # |     00     | Операция завершилась нормально          |
-      # |     01     | Ошибка контрольной суммы зоны данных    |
-      # |     02     | Ошибка контрольной суммы зоны заголовка |
-      # |     03     | Не найден адресный маркер               |
-      # |    100     | Дискета не отформатированна             |
-      # |    101     | Не обнаружен межсекторный промежуток    |
-      # |    102     | Не найден сектор с заданным номером     |
-      # |     04     | Не найден маркер данных                 |
-      # |     05     | Сектор на найден                        |
-      # |     06     | Защита от записи                        |
-      # |     07     | Нулевая дорожка не обнаружена           |
-      # |     10     | Дорожка не обнаружена                   |
-      # |     11     | Неверный массив параметров              |
-      # |     12     | Резерв                                  |
-      # |     13     | Неверный формат сектора                 |
-      # |     14     | Не найден индекс (ошибка линии ИНДЕКС)  |
-      # +------------------------------------------------------+
-        SEC  # set carry flag to indicate that there was an error
-
-1237$: .ppudo_ensure $PPU.RestoreVblankInt
-        RETURN
-# DiskIO_WaitForFinish #-------------------------------------------}}}
-ParamsStruct:
-    PS.Status:          .byte -1  # operation status code
-    PS.Command:         .byte 010 # read data from disk
-    PS.DeviceType:      .byte 02       # double sided disk
-    PS.DeviceNumber:    .byte 0x00 | 0 # bit 7: head(0-bottom, 1-top) ∨ drive number 0(0-3)
-    PS.AddressOnDevice: .byte 0, 1     # track 0(0-79), sector 1(1-10)
-    PS.CPU_RAM_Address: .word 0
-    PS.WordsCount:      .word 0        # number of words to transfer
 # files data ----------------------------------------------------------------{{{
 # each record is 3 words:
 #   .word address for the data from a disk

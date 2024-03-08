@@ -10,6 +10,15 @@
                .global player.bin
                .global title.bin
 
+               .global LoadDiskFile
+               .global PS.Status
+               .global PS.Command
+               .global PS.DeviceType
+               .global PS.DeviceNumber
+               .global PS.AddressOnDevice
+               .global PS.CPU_RAM_Address
+               .global PS.WordsCount
+
                .equiv PPU_MODULE_LOADING_ADDR, 0100000
 
        .=0

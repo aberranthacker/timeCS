@@ -124,8 +124,8 @@ build/c2ay_toyhifi.raw : $(BMP_TO_RAW) gfx/c2ay_toyhifi.bmp
 # loader.bin ----------------------------------------------------------------}}}
 
 # player.bin ----------------------------------------------------------------{{{
-build/player.bin : build/player.o
-	$(LD) $(LDFLAGS) -M build/player.o -o build/player.out > build/player.map.txt
+build/player.bin : build/player.o build/bootsector.o
+	$(LD) $(LDFLAGS) -R build/bootsector.o -M build/player.o -o build/player.out > build/player.map.txt
 	ruby $(AOUT2SAV) build/player.out -b -s -o build/player.bin
 build/player.o : $(COMMON) \
                player.s \
@@ -171,8 +171,8 @@ build/song_names.raw: $(BMP_TO_RAW) gfx/song_names.bmp
 # player.bin ----------------------------------------------------------------}}}
 
 # title.bin ----------------------------------------------------------------{{{
-build/title.bin : build/title.o
-	$(LD) $(LDFLAGS) -M build/title.o -o build/title.out > build/title.map.txt
+build/title.bin : build/title.o build/bootsector.o
+	$(LD) $(LDFLAGS) -R build/bootsector.o -M build/title.o -o build/title.out > build/title.map.txt
 	$(AOUT2SAV) build/title.out -b -s -o build/title.bin
 build/title.o : $(COMMON) \
                 title.s \
