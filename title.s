@@ -69,6 +69,7 @@ start:
            .endr
         SOB  R1,100$
        .ppudo_ensure $PPU.SetPalette, $title_palette
+       .ppudo_ensure $PPU.SetPaletteFB1, $bw_palette
 
         CALL MOSAIC
 
@@ -174,22 +175,11 @@ TUNNEL_END:
         .word 0 # end of data marker
 
 DRAW_CIRCLE_OPER: #----------------------------------------------------------{{{
-            MOV  $PPU.SET_FB0_VISIBLE,@$CCH1OD
             PUSH R4
             PUSH R5
             CALL DRAW_CIRCLE
             POP  R5
             POP  R4
-
-            CLR  R0
-            BISB @BK11_PALETTE_IDX, R0
-            BZE  1237$
-
-            ASLB R0
-            BCC  1237$
-
-            MOV  $PPU.SET_FB1_VISIBLE,@$CCH1OD
-1237$:
             RETURN
 
 DRAW_CIRCLE:
@@ -518,145 +508,21 @@ END_OF_PART: #---------------------------------------------------------------{{{
         BNZ 3$
 
         MOV $DUMMY_INTERRUPT_HANDLER, @$0100
-        MOV  $PPU.SET_FB0_VISIBLE,@$CCH1OD
        .ppudo_ensure $PPU.PT3Play.Stop
         RETURN
 # END_OF_PART ---------------------------------------------------------------}}}
 
+# Vblank int handler
 TIKTAK: #--------------------------------------------------------------------{{{
-        MOV  R0, -(SP)
-        MOV  R1, -(SP)
-        MOV  R2, -(SP)
-        MOV  R3, -(SP)
-        MOV  R4, -(SP)
-        MOV  R5, -(SP)
-
-       .equiv Title.PLAY_NOW, .+2
-        TST  $0 # updated by PPU, at least supposed to
-        BZE  TIKTAK_EXIT
+       .equiv Title.PLAY_NOW, .+2 # updated by PPU, at least supposed to
+        TST  $0
+        BZE  1237$
 
        .equiv FRAME_NUMBER, .+2
         INC  $-1
 
-      .equiv PALETTE_CHANGE_NEXT_FRAME_NUMBER, .+4
-        CMP  FRAME_NUMBER, $68
-        BLO  TIKTAK_EXIT
-
-        CMP  FRAME_NUMBER, $9840
-        BGE  TIKTAK_EXIT
-
-        ADD  $96-18, PALETTE_CHANGE_NEXT_FRAME_NUMBER
-       .equiv BK11_PALETTE_IDX, .+2
-        MOV  $PALETTES_FOR_CHANGE, R1
-    1$: CLR  R0
-        BISB (R1)+, R0
-        BNZ  2$
-
-        MOV  $PALETTES_FOR_CHANGE, R1
-        BR   1$
-
-    2$: MOV  R1, BK11_PALETTE_IDX
-
-        CALL SetBKPaletteFromR0
-
-    TIKTAK_EXIT:
-        MOV  (SP)+, R5
-        MOV  (SP)+, R4
-        MOV  (SP)+, R3
-        MOV  (SP)+, R2
-        MOV  (SP)+, R1
-        MOV  (SP)+, R0
-
-        RTI
-
-SetBKPaletteFromR0:
-        ASLB R0
-        BCS  SwithToFB1
-
-        MOV  $PPU.SET_FB0_VISIBLE,@$CCH1OD
-        BR   1237$
-
-    SwithToFB1:
-        MOV  $PPU.SET_FB1_VISIBLE,@$CCH1OD
-        MOV  palettes_table(R0),@$PPUCommandArg
-       .ppudo_ensure $PPU.SetPaletteFB1
-       #MOVB R0, @$0177663
-1237$:
-        RETURN
-
-PALETTES_FOR_CHANGE:
-    .byte  014,  014,  014, 0215,  014,  014, 0216, 014
-    .byte 0203,  014, 0201,  014 , 014,  014, 0202, 014
-    .byte  014,  014, 0204,  014, 0203, 0203,  014, 014
-    .byte 0216,  014, 0205,  014,  014, 0206, 0207, 014
-    .byte  014, 0205, 0205,    0
-    .even
+1237$:  RTI
 # TIKTAK --------------------------------------------------------------------}}}
-palettes_table:
-    .word palette_014 # palette_00
-    .word palette_01
-    .word palette_02
-    .word palette_03
-    .word palette_04
-    .word palette_05
-    .word palette_06
-    .word palette_07
-    .word palette_014 # palette_010
-    .word palette_014 # palette_011
-    .word palette_014 # palette_012
-    .word palette_014 # palette_013
-    .word palette_014
-    .word palette_015
-    .word palette_016
-
-palette_00:
-    .word      1, setColors; .byte Black, brBlue, brGreen, brRed
-    .word untilEndOfScreen
-palette_01:
-    .word      1, setColors; .byte Black, brYellow, brMagenta, brRed
-    .word untilEndOfScreen
-palette_02:
-    .word      1, setColors; .byte Black, brCyan, brBlue, brMagenta
-    .word untilEndOfScreen
-palette_03:
-    .word      1, setColors; .byte Black, brGreen, brCyan, brYellow
-    .word untilEndOfScreen
-palette_04:
-    .word      1, setColors; .byte Black, brMagenta, brCyan, White
-    .word untilEndOfScreen
-palette_05:
-    .word      1, setColors; .byte Black, White, White, White
-    .word untilEndOfScreen
-palette_06:
-    .word      1, setColors; .byte Black, brRed, brRed, brRed
-    .word untilEndOfScreen
-palette_07:
-    .word      1, setColors; .byte Black, brGreen, brGreen, brGreen
-    .word untilEndOfScreen
-palette_010:
-    .word      1, setColors; .byte Black, brMagenta, brMagenta, brMagenta
-    .word untilEndOfScreen
-palette_011:
-    .word      1, setColors; .byte Black, brGreen, brMagenta, brRed
-    .word untilEndOfScreen
-palette_012:
-    .word      1, setColors; .byte Black, brGreen, brMagenta, brRed
-    .word untilEndOfScreen
-palette_013:
-    .word      1, setColors; .byte Black, brCyan, brYellow, brRed
-    .word untilEndOfScreen
-palette_014:
-    .word      1, setColors; .byte Black, brRed, brGreen, brCyan
-    .word untilEndOfScreen
-palette_015:
-    .word      1, setColors; .byte Black, brCyan, brYellow, White
-    .word untilEndOfScreen
-palette_016:
-    .word      1, setColors; .byte Black, brYellow, brGreen, White
-    .word untilEndOfScreen
-palette_017:
-    .word      1, setColors; .byte Black, brCyan, brGreen, White
-    .word untilEndOfScreen
 
 # Creates three sets of 2-bit sprites from a set of 1-bit sprites
 GFX_timeCS_PREP: #-----------------------------------------------------------{{{
@@ -828,6 +694,11 @@ w3.raw.lzsa:
 title_palette: #----------------------------------------------------------------
     .word      0, setCursorScalePalette, cursorGraphic, scale320 | RGB
     .word      1, setColors; .byte Black, brRed, brGreen, White
+    .word untilEndOfScreen
+#-------------------------------------------------------------------------------
+bw_palette: #-------------------------------------------------------------------
+    .word      0, setCursorScalePalette, cursorGraphic, scale320 | RGB
+    .word      1, setColors; .byte Black, Gray, Cyan, White
     .word untilEndOfScreen
 #-------------------------------------------------------------------------------
 GFX_timeCS_MASK:

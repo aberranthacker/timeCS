@@ -105,6 +105,7 @@ build/ppu_module.bin : build/ppu.o \
 build/ppu.o : $(COMMON) \
               ppu.s \
               ppu/interrupts_handlers.s \
+              ppu/glitch.s \
               psgplayer.s \
               pt3play2.s
 	$(AS) ppu.s $(INCS) -al -o build/ppu.o | $(FORMAT_LIST)

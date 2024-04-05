@@ -22,10 +22,12 @@ start:
       #       which allows to enable RW access to RAM in that range
       #       when bit 4 is set as well
       # bits 1-3 used to select ROM cartridge banks
+
       # bit 4 replaces ROM in range 0100000..0117777 with RAM, see bit 0
       # bit 5 replaces ROM in range 0120000..0137777 with write only RAM
       # bit 6 replaces ROM in range 0140000..0157777 with write only RAM
       # bit 7 replaces ROM in range 0160000..0176777 with write only RAM
+
       # bit 8 enables PPU Vblank interrupt when clear, disables when set
       # bit 9 enables CPU Vblank interrupt when clear, disables when set
       #
@@ -319,7 +321,7 @@ AberrantSoundModulePresent:
         MOV  $0173362,@$4 # restore back Trap 4 handler
 
         MOV  $0100, R0
-        MOV  $VblankIntHandler,(R0)+
+        MOV  $VblankIntHandler, (R0)+
         CLR  (R0) # allows to receive interrups while handling Vblank int
 
       # inform loader that PPU is ready to receive commands
@@ -569,11 +571,13 @@ ClearOffscreenArea: # -------------------------------------------------------{{{
 #----------------------------------------------------------------------------}}}
 psgplayer.Play:
         MOV $psgplayer.MUS_PLAY, @$PlayMusicProc
+        MOV $-1, FRAME_NUMBER
         MOV $CPU.Title.PLAY_NOW, @$PBPADR
         INC @$PBP12D
         RETURN
 pt3play2.Start:
         MOV $pt3play2.PLAY, @$PlayMusicProc
+        MOV $-1, FRAME_NUMBER
         RETURN
 pt3play2.Stop:
         MOV $NULL, @$PlayMusicProc
@@ -587,6 +591,32 @@ LoadDiskFile: # -------------------------------------------------------------{{{
 
         RETURN
 #----------------------------------------------------------------------------}}}
+
+# Generates a next 16-bit pseudorandom number
+# generator period is 0xfffe0000 (4294836224)
+#
+# Inputs:
+#       None
+# Outputs:
+#       R0 - next pseudorandom number
+# Corrupts:
+#       None
+#
+ # Author: Alexander "Sandro" Tishin
+ #
+ TRandW:
+        .equiv rseed1, .+2
+         MOV $0, R0
+         ADD R0, R0
+         BHI 1$
+         ADD $39, R0
+     1$:
+         MOV R0, @$rseed1
+        .equiv rseed2, .+2
+         ADD $0, R0
+         MOV R0, @$rseed2
+         RETURN
+
 RestoreVblankInt:
         MOV $VblankIntHandler, @$0100
         RETURN

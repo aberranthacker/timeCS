@@ -12,15 +12,40 @@ VblankIntHandler: #----------------------------------------------------------{{{
         PUSH R2
         PUSH R1
         PUSH R0
-
         PUSH @$PBPADR
+
+        CALL TRandW
 
        .equiv PlayMusicProc, .+2
         CALL @$NULL
 
-        POP @$PBPADR
+        CMP  @$PlayMusicProc, $psgplayer.MUS_PLAY
+        BNE  VblankInt_Finalize
+
+       .equiv FRAME_NUMBER, .+2
+        INC  $-1
+
+        CMP  FRAME_NUMBER, $50 * 2 # is it time to introduce glitches?
+        BLO  VblankInt_Finalize
+
+        CALL Glitch.RemoveStale
+
+        CLR  R0
+        MOV  FRAME_NUMBER, R1
+       .equiv GlitchDivider, .+2
+        DIV  $1, R0
+        TST  R1
+        BNZ  VblankInt_Finalize
+
+        CALL  Glitch.Add
+
+        CALL TRandW
+        BIC  $0xFF80, R0 # random number 0..127
+        ADD  $2, R0      # to avoid division by 0, and to reduce min delay
+        MOV  R0, GlitchDivider
 
 VblankInt_Finalize:
+        POP @$PBPADR
         POP R0
         POP R1
         POP R2
@@ -31,12 +56,13 @@ VblankInt_Finalize:
       # we do not need firmware interrupt handler except for this small
       # procedure
         TST  @$07130 # is floppy drive spindle rotating?
-        BZE  1237$   # no, exit
+        BZE  1271$   # no, exit
         DEC  @$07130 # decrease spindle rotation counter
-        BNZ  1237$   # continue rotation unless the counter reaches zero
+        BNZ  1271$   # continue rotation unless the counter reached zero
         CALL @07132  # stop floppy drive spindle
 
-1237$:  RTI
+1271$:  RTI
+       .include "ppu/glitch.s"
 #----------------------------------------------------------------------------}}}
 
 KeyboardIntHadler: #---------------------------------------------------------{{{
@@ -128,6 +154,7 @@ KeyboardIntHadler: #---------------------------------------------------------{{{
         POP R0
         RTI
 #----------------------------------------------------------------------------}}}
+# Receives commands from CPU
 Channel0In_IntHandler: #-----------------------------------------------------{{{
         PUSH R5
 
@@ -150,6 +177,7 @@ Channel0In_IntHandler: #-----------------------------------------------------{{{
 CommandsQueue_Full:
         BR   .
 #----------------------------------------------------------------------------}}}
+# Sets framebuffer
 Channel1In_IntHandler: #-----------------------------------------------------{{{
         PUSH R0
 

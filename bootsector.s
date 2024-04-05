@@ -91,6 +91,8 @@ LoadDiskFile: # ----------------------------------------------------------------
         10$:
             TSTB @$PS.Status
         BMI  10$
+        
+       .ppudo $PPU.RestoreVblankInt
         RETURN
 
 Channel2Send:
@@ -168,6 +170,6 @@ player.bin:
     .word 0
     .word 0
 #-------------------------------------------------------------------------------
-TitleStr: .asciz "loading timeCS"
+TitleStr: .asciz "timeCS"
 #-------------------------------------------------------------------------------
     .=0600
