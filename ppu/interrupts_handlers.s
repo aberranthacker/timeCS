@@ -53,6 +53,7 @@ VblankInt_Finalize:
         POP R4
         POP R5
 
+VblankIntHandler.Minimal:
       # we do not need firmware interrupt handler except for this small
       # procedure
         TST  @$07130 # is floppy drive spindle rotating?

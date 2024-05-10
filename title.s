@@ -30,6 +30,7 @@ start:
 
         CALL PROGRESS_BAR_DISPLAY
 
+#:bpt
         MOV  $f7001.lzsa,R0
         MOV  $0100000,@$CBPADR
         CALL LoadPSGP

@@ -320,9 +320,9 @@ AberrantSoundModulePresent:
         MOV  R2,@$pt3play2.PSG1
         MOV  $0173362,@$4 # restore back Trap 4 handler
 
-        MOV  $0100, R0
-        MOV  $VblankIntHandler, (R0)+
-        CLR  (R0) # allows to receive interrups while handling Vblank int
+        MOV @$023166, rseed1 # set cursor presence counter value as random seed
+
+        MOV  $VblankIntHandler, @$100
 
       # inform loader that PPU is ready to receive commands
         MOV  $CPU_PPUCommandArg,@$PBPADR
@@ -351,7 +351,6 @@ Queue_Loop:
 #-------------------------------------------------------------------------------
 CommandVectors:
        .word LoadDiskFile
-       .word RestoreVblankInt
        .word SetPalette            # PPU.SetPalette
        .word SetPaletteFB1         # PPU.SetPalette
        .word psgplayer.MUS_INIT
@@ -594,11 +593,15 @@ pt3play2.Stop:
         RETURN
 
 LoadDiskFile: # -------------------------------------------------------------{{{
-        MOV $PPU.DummyInterruptHandler, @$0100 #
+        MOV $VblankIntHandler.Minimal, @$0100 #
 
         MOV R0, @$023200 # set ParamsStruct address for firmware proc to use
         CALL @$0125030   # firmware proc that handles channel 2
-
+        10$:
+            TSTB @$023334                                                                                                                            
+        BMI 10$          # wait until loaded
+                                                                                                                                                 
+        MOV $VblankIntHandler, @$0100                                                                                                            
         RETURN
 #----------------------------------------------------------------------------}}}
 
@@ -625,13 +628,8 @@ LoadDiskFile: # -------------------------------------------------------------{{{
         .equiv rseed2, .+2
          ADD $0, R0
          MOV R0, @$rseed2
-         RETURN
 
-RestoreVblankInt:
-        MOV $VblankIntHandler, @$0100
-        RETURN
-
-NULL:   RETURN
+NULL:    RETURN
 
        .include "ppu/interrupts_handlers.s"
        .include "psgplayer.s"

@@ -6,18 +6,17 @@
 .equiv CPU_PPUCommandArg, PPUCommandArg >> 1
 
 .equiv PPU.LoadDiskFile,      0 << 1
-.equiv PPU.RestoreVblankInt,  1 << 1
-.equiv PPU.SetPalette,        2 << 1
-.equiv PPU.SetPaletteFB1,     3 << 1
-.equiv PPU.PSGP_Player.Init,  4 << 1
-.equiv PPU.PSGP_Player.Play,  5 << 1
-.equiv PPU.PSGP_Player.Stop,  6 << 1
-.equiv PPU.PT3Play.Init,      7 << 1
-.equiv PPU.PT3Play.Mute,      8 << 1
-.equiv PPU.PT3Play.Start,     9 << 1
-.equiv PPU.PT3Play.Stop,     10 << 1
+.equiv PPU.SetPalette,        1 << 1
+.equiv PPU.SetPaletteFB1,     2 << 1
+.equiv PPU.PSGP_Player.Init,  3 << 1
+.equiv PPU.PSGP_Player.Play,  4 << 1
+.equiv PPU.PSGP_Player.Stop,  5 << 1
+.equiv PPU.PT3Play.Init,      6 << 1
+.equiv PPU.PT3Play.Mute,      7 << 1
+.equiv PPU.PT3Play.Start,     8 << 1
+.equiv PPU.PT3Play.Stop,      9 << 1
 
-.equiv PPU.LastJMPTableIndex, 10 << 1
+.equiv PPU.LastJMPTableIndex, 9 << 1
 
 .equiv PPU.SET_FB0_VISIBLE, 0
 .equiv PPU.SET_FB1_VISIBLE, 1

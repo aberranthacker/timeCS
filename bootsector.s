@@ -91,8 +91,7 @@ LoadDiskFile: # ----------------------------------------------------------------
         10$:
             TSTB @$PS.Status
         BMI  10$
-        
-       .ppudo $PPU.RestoreVblankInt
+
         RETURN
 
 Channel2Send:
