@@ -105,7 +105,7 @@ Glitch.RemoveStale: #--------------------------------------------------------{{{
 1237$:  RETURN                 #   no, do nothing
 
 Glitch.Remove:
-        MOV  FB0_FirstRecAddr, R2 # first screen line SLTAB record
+        MOV  FB0_FirstRecAddr, R2 # first screen line SLTAB entry
         ADD  (R1)+, R2            # add offset to record to update
         ADD  $6, R2               # add offset of "next record" entry
 

@@ -475,7 +475,7 @@ END_OF_PART: #---------------------------------------------------------------{{{
         TST Title.PLAY_NOW
         BNZ 100$
 
-       .ppudo_ensure $PPU.PT3Play.Stop
+       .ppudo_ensure $PPU.PSGP_Player.Stop
 
    100$:
         MOV $NOP_OPCODE, SCREEN_ADDER

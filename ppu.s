@@ -356,6 +356,7 @@ CommandVectors:
        .word SetPaletteFB1         # PPU.SetPalette
        .word psgplayer.MUS_INIT
        .word psgplayer.Play
+       .word psgplayer.Stop
        .word pt3play2.INIT
        .word pt3play2.MUTE
        .word pt3play2.Start
@@ -575,14 +576,23 @@ psgplayer.Play:
         MOV $CPU.Title.PLAY_NOW, @$PBPADR
         INC @$PBP12D
         RETURN
+
+psgplayer.Stop:
+        MOV $NULL, @$PlayMusicProc
+        CALL psgplayer.MUTE
+        CALL Glitch.RemoveStale
+        RETURN
+
 pt3play2.Start:
         MOV $pt3play2.PLAY, @$PlayMusicProc
         MOV $-1, FRAME_NUMBER
         RETURN
+
 pt3play2.Stop:
         MOV $NULL, @$PlayMusicProc
         CALL pt3play2.MUTE
         RETURN
+
 LoadDiskFile: # -------------------------------------------------------------{{{
         MOV $PPU.DummyInterruptHandler, @$0100 #
 

@@ -1,4 +1,4 @@
-BIN_UTILS_PATH   = ~/opt/binutils-pdp11/pdp11-dec-aout/bin
+BIN_UTILS_PATH   = ~/opt/binutils-pdp11-unpatched/pdp11-dec-aout/bin
 BUILD_TOOLS_PATH = ./build_tools
 
 AS = $(BIN_UTILS_PATH)/as
@@ -477,7 +477,7 @@ build/clock3/dangling2.raw : gfx/clock3/dangling2.bmp
 	$(BMP_TO_RAW) gfx/clock3/dangling2.bmp build/clock3/dangling2.raw
 #----------------------------------------------------------------------------}}}
 
- # build/clock4_screen.bin -----------{{{
+ # build/clock4_screen.bin -------------------------------------------------{{{
 build/clock4_screen.bin.lzsa3 : build/clock4_screen.bin
 	$(LZSA3) build/clock4_screen.bin build/clock4_screen.bin.lzsa3
 
